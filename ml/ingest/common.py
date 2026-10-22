@@ -37,6 +37,7 @@ POSTSEASON_WEEKS = 4
 REGULAR_SEASON = "REG"
 
 Check = Callable[[pl.DataFrame, int], None]
+Normalize = Callable[[pl.DataFrame], pl.DataFrame]
 
 
 class DataValidationError(ValueError):
@@ -62,6 +63,9 @@ class DatasetSpec:
             ``"REG"`` is treated as postseason.
         duplicate_keys: ``"error"`` rejects duplicate keys; ``"warn"`` keeps and counts them.
         checks: Extra dataset-specific checks, each raising :class:`DataValidationError`.
+        normalize: Optional dtype fix-up applied before validation, for sources whose
+            schema drifts between seasons. Keep it to lossless casts; cleaning belongs in
+            ``ml.features``.
     """
 
     name: str
@@ -75,6 +79,7 @@ class DatasetSpec:
     season_types: frozenset[str]
     duplicate_keys: Literal["error", "warn"] = "error"
     checks: tuple[Check, ...] = field(default=())
+    normalize: Normalize | None = None
 
 
 @dataclass(frozen=True)
@@ -92,6 +97,22 @@ class SeasonRecord:
 def regular_season_weeks(season: int) -> int:
     """Return the number of regular-season weeks (17 through 2020, 18 from 2021)."""
     return 17 if season <= 2020 else 18
+
+
+def cast_integral_floats(
+    df: pl.DataFrame, columns: list[str], dtype: type[pl.DataType] = pl.Int32
+) -> pl.DataFrame:
+    """Cast float ``columns`` to ``dtype`` when every non-null value is a whole number.
+
+    Raises:
+        DataValidationError: If a float column holds a non-integral value, so the cast
+            would lose information.
+    """
+    floats = [c for c in columns if c in df.columns and df.schema[c].is_float()]
+    for col in floats:
+        if (df[col].drop_nulls() % 1 != 0).any():
+            raise DataValidationError(f"column {col!r} has non-integral values")
+    return df.with_columns(pl.col(floats).cast(dtype)) if floats else df
 
 
 def count_duplicate_keys(df: pl.DataFrame, spec: DatasetSpec) -> int:
@@ -236,7 +257,10 @@ def ingest_seasons(
             )
         else:
             logger.info("%s %d: downloading", spec.name, season)
-            df = validate(spec.fetch(season), season, spec)
+            df = spec.fetch(season)
+            if spec.normalize is not None:
+                df = spec.normalize(df)
+            df = validate(df, season, spec)
             write_season(df, out_dir, season)
         record = describe_season(path, season, spec)
         if record.null_id_rows:

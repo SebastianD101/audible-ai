@@ -142,6 +142,28 @@ def test_validate_runs_extra_checks() -> None:
         common.validate(make_frame().with_columns(pl.lit(-1.0).alias("points")), 2021, spec)
 
 
+def test_cast_integral_floats_casts_whole_numbers_only() -> None:
+    df = make_frame().with_columns(pl.col("season", "week").cast(pl.Float64))
+    out = common.cast_integral_floats(df, ["season", "week", "points", "not_a_column"])
+    assert out.equals(make_frame().with_columns(pl.col("points").cast(pl.Int32)))
+
+
+def test_cast_integral_floats_rejects_fractional_values() -> None:
+    df = make_frame().with_columns(pl.lit(1.5).alias("points"))
+    with pytest.raises(common.DataValidationError, match="non-integral"):
+        common.cast_integral_floats(df, ["points"])
+
+
+def test_ingest_normalizes_before_validating(tmp_path: Path) -> None:
+    spec = dataclasses.replace(
+        SPEC,
+        fetch=lambda season: make_frame(season).with_columns(pl.col("week").cast(pl.Float64)),
+        normalize=lambda df: common.cast_integral_floats(df, ["week"]),
+    )
+    common.ingest_seasons(spec, [2021], tmp_path)
+    assert pl.read_parquet(common.season_path(tmp_path, 2021)).schema["week"] == pl.Int32
+
+
 def test_write_season_round_trips(tmp_path: Path) -> None:
     df = make_frame()
     path = common.write_season(df, tmp_path, 2021)
