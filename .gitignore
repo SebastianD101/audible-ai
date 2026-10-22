@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Data and experiment tracking (reproducible via scripts)
+ml/data/**
+!ml/data/.gitkeep
+mlruns/
+mlartifacts/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Node / Next.js
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
