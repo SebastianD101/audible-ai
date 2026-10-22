@@ -85,7 +85,8 @@ Finish and commit each phase before starting the next. Do not start a later phas
 - Tests: `uv run pytest` (add `-m network` for live nflverse tests) and `cd frontend && npm test`
 - Lint and types: `uv run ruff check . && uv run ruff format --check . && uv run mypy .`
 - Frontend checks: `cd frontend && npm run lint && npm run typecheck && npm test`
-- Ingest weekly stats: `uv run python -m ml.ingest.weekly_stats --start-season 2018 --end-season 2025`
+- Ingest all raw data: `uv run python -m ml.ingest --start-season 2018 --end-season 2025` (add `--force` to refresh)
+- Ingest one dataset: `uv run python -m ml.ingest.<weekly_stats|schedules|rosters_weekly|injuries|snap_counts|players>`
 - Backtest: `uv run python -m ml.backtest.run --start-season 2018 --end-season 2025`
 
 (Update these as the repo takes shape.)
