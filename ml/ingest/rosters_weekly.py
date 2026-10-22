@@ -11,6 +11,11 @@ cross-platform IDs (``sleeper_id``, ``espn_id``, ``yahoo_id``, ``pfr_id``) used 
 parsed screenshot rosters. A handful of rows per season have a null ``gsis_id``; they are kept
 and counted in the manifest.
 
+Duplicate ``(gsis_id, week)`` rows are kept and counted rather than rejected, because upstream
+has at least one ID collision: in 2019 weeks 2-17, Isaiah Searight (NYG) is listed under Quinnen
+Williams's gsis ID ``00-0035718`` (Searight's own ID is ``00-0035478``). Joins on these keys must
+deduplicate or check the name against the ``ml.ingest.players`` crosswalk.
+
 nflverse does not publish the time each weekly snapshot was taken, so ``status`` should be
 treated as "status for that week" rather than a timestamped pre-kickoff observation.
 """
@@ -58,6 +63,7 @@ SPEC = common.DatasetSpec(
     id_column="gsis_id",
     season_type_column="game_type",
     season_types=frozenset({"REG", "WC", "DIV", "CON", "SB"}),
+    duplicate_keys="warn",
 )
 
 

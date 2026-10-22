@@ -1,3 +1,6 @@
+import dataclasses
+from pathlib import Path
+
 import polars as pl
 import pytest
 
@@ -43,11 +46,15 @@ def test_accepts_weekly_rows_with_some_null_ids() -> None:
     assert validate(df).equals(df)
 
 
-def test_rejects_same_player_twice_in_one_week() -> None:
+def test_upstream_id_collision_is_kept_and_counted(tmp_path: Path) -> None:
+    # Mirrors 2019: a second player listed under an existing gsis_id on another team.
     df = make_rosters()
-    dupe = df.head(1).with_columns(pl.lit("BBB").alias("team"))
-    with pytest.raises(common.DataValidationError, match="duplicate"):
-        validate(pl.concat([df, dupe]))
+    collision = df.head(1).with_columns(
+        pl.lit("BBB").alias("team"), pl.lit("Other Player").alias("full_name")
+    )
+    spec = dataclasses.replace(rw.SPEC, fetch=lambda _: pl.concat([df, collision]))
+    [record] = common.ingest_seasons(spec, [2021], tmp_path)
+    assert (record.rows, record.null_id_rows, record.duplicate_key_rows) == (5, 1, 1)
 
 
 def test_rejects_missing_platform_id_column() -> None:
