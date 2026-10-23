@@ -86,5 +86,5 @@ def test_labels_score_played_games_and_zero_for_missed_games() -> None:
     labelled = sp.add_labels(build(Week(2023, 3)), syn.stats())
     wr1 = labelled.filter(pl.col("player_id") == "wr1").row(0, named=True)
     qb1 = labelled.filter(pl.col("player_id") == "qb1").row(0, named=True)
-    assert (wr1["target_ppr"], wr1["target_std"], wr1["target_played"]) == (0.0, 0.0, False)
-    assert (qb1["target_ppr"], qb1["target_std"], qb1["target_played"]) == (20.0, 17.0, True)
+    assert (wr1["label_ppr"], wr1["label_std"], wr1["label_played"]) == (0.0, 0.0, False)
+    assert (qb1["label_ppr"], qb1["label_std"], qb1["label_played"]) == (20.0, 17.0, True)

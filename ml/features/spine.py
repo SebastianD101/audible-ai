@@ -27,7 +27,7 @@ from ml.features.load import FANTASY_POSITIONS
 
 OUTCOME_COLUMNS = ("points_for", "points_against")
 SPINE_COLUMNS = ["player_id", "name", "position", "season", "week", "team", "opponent", "game_id"]
-LABEL_COLUMNS = ["target_ppr", "target_std", "target_played"]
+LABEL_COLUMNS = ["label_ppr", "label_std", "label_played"]
 ROSTER_STATUSES = ("ACT", "INA", "RES")
 
 
@@ -92,16 +92,16 @@ def add_labels(spine: pl.DataFrame, stats: pl.DataFrame) -> pl.DataFrame:
     """Attach week-W points to the spine; 0 points when the player recorded no stat line.
 
     This reads the target week by design. It is the only function that may, and its outputs
-    are prefixed ``target_`` so they can never be mistaken for features.
+    are prefixed ``label_`` (not ``target_``, which would collide with ``target_share``).
     """
     scored = stats.select(
         "player_id",
         "season",
         "week",
-        pl.col("fantasy_points_ppr").alias("target_ppr"),
-        pl.col("fantasy_points").alias("target_std"),
+        pl.col("fantasy_points_ppr").alias("label_ppr"),
+        pl.col("fantasy_points").alias("label_std"),
     )
     return spine.join(scored, on=["player_id", "season", "week"], how="left").with_columns(
-        pl.col("target_ppr").is_not_null().alias("target_played"),
-        pl.col("target_ppr", "target_std").fill_null(0.0),
+        pl.col("label_ppr").is_not_null().alias("label_played"),
+        pl.col("label_ppr", "label_std").fill_null(0.0),
     )
