@@ -184,6 +184,7 @@ default-groups = ["dev", "ml"]
 dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "nflreadpy" },
+    { name = "numpy" },
     { name = "polars" },
     { name = "pyarrow" },
     { name = "pydantic" },
@@ -206,6 +207,7 @@ ml = [
 requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = "==0.142.4" },
     { name = "nflreadpy", specifier = "==0.1.5" },
+    { name = "numpy", specifier = "==2.5.3" },
     { name = "polars", specifier = "==1.44.2" },
     { name = "pyarrow", specifier = "==25.0.1" },
     { name = "pydantic", specifier = "==2.13.5" },
