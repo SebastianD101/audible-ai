@@ -29,8 +29,10 @@ import polars as pl
 logger = logging.getLogger(__name__)
 
 DEFAULT_START_SEASON = 2018
-# 2026 is the live holdout season (see CLAUDE.md); it is never fetched by default.
-DEFAULT_END_SEASON = 2025
+# 2026 is the live holdout season (see CLAUDE.md); it is never fetched by default, and the
+# backtest refuses to evaluate it.
+HOLDOUT_SEASON = 2026
+DEFAULT_END_SEASON = HOLDOUT_SEASON - 1
 FIRST_AVAILABLE_SEASON = 1999
 # Wild card, divisional, conference championship, and Super Bowl.
 POSTSEASON_WEEKS = 4
