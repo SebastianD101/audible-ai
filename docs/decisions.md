@@ -164,3 +164,17 @@ degree of freedom on the training years; the untouched 2026 holdout is the guard
 Player stats use `LV` for the Raiders in 2018-2019, while schedules, rosters, injuries, and
 snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_id`s keep
 `OAK` (they agree across sources) and are treated as opaque keys.
+
+## 2026-10-23: MLflow in a separate `ml` dependency group; lockfile age floor
+
+- **MLflow 3.16.1** (Sep 16), the final patch of the previous minor version. 3.17.0 shipped
+  Oct 7 and needed two patch releases within two weeks, so it was skipped.
+- **Separate group:** MLflow and its dependencies (Flask, Alembic, pandas, ...) are only for
+  training and tracking. They live in a uv dependency group `ml`, synced by default for
+  development. The backend Docker image installs with `--no-default-groups`, so it carries
+  neither MLflow nor the dev tools.
+- **`exclude-newer` in `[tool.uv]`:** the pinning policy previously covered only direct
+  dependencies. Setting `exclude-newer = 2026-10-09` re-resolved about 20 *transitive* packages
+  that were less than two weeks old (e.g. `certifi`, `coverage`, `httptools`, `numpy` patch
+  releases) to older versions, and all checks pass. The date is a deliberate knob. Bump it when
+  upgrading dependencies, then re-run CI.
