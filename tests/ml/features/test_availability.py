@@ -63,6 +63,18 @@ def test_teammate_out_vacates_target_share() -> None:
     assert wr1["vacated_target_share_team"] == pytest.approx(0.0)
 
 
+def test_long_term_absence_does_not_vacate_again() -> None:
+    # As of 2023 week 5 wr1 missed AAA's last game (week 3) but played week 2: newly out.
+    # Give wr1 a two-game absence (weeks 2 and 3): no longer new, so nothing is vacated.
+    stats = syn.stats().filter(
+        ~((pl.col("player_id") == "wr1") & (pl.col("season") == 2023) & (pl.col("week") == 2))
+    )
+    as_of = Week(2023, 5)
+    out = av.availability_features(**{**inputs(as_of), "stats": stats}, as_of=as_of)
+    assert row(out, "wr1")["games_missed_last3"] == 2
+    assert row(out, "rb1")["vacated_target_share_team"] == pytest.approx(0.0)
+
+
 def test_leaving_last_game_early_counts_as_out() -> None:
     hurt = syn.snaps().with_columns(
         pl.when((pl.col("player_id") == "rb1") & (pl.col("season") == 2023) & (pl.col("week") == 2))

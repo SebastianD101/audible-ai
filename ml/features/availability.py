@@ -8,9 +8,11 @@ Waiver-time stand-ins for week-W injury news (which isn't published until Wednes
 - Whether they **left the last game early**: snap share under half their season norm. This is
   the usual Sunday injury that drives Tuesday waiver claims.
 
-Vacated opportunity: the season-to-date target and rush shares of teammates who are out by
-the same signals (missed the last game, on reserve, or left it early). Shares freed up by an
-injured starter are the classic source of waiver value.
+Vacated opportunity: the season-to-date target and rush shares of teammates who are **newly**
+out: they left the last game early, or they played the game before last and then missed the last
+game or went on reserve. Counting only new absences matters: a starter on season-long IR had
+his role redistributed weeks ago, while a fresh injury is what creates waiver value. (Counting
+all absences put 37% of WR/TE rows above 0.15 vacated share, with almost no signal.)
 """
 
 from __future__ import annotations
@@ -74,7 +76,8 @@ def player_status(
         .alias("left_last_game_early"),
     ).join(
         per_game.group_by("player_id").agg(
-            (~pl.col("played")).sum().cast(pl.Int32).alias("games_missed_last3")
+            (~pl.col("played")).sum().cast(pl.Int32).alias("games_missed_last3"),
+            pl.col("played").filter(pl.col("recency") == 2).any().alias("played_prev_game"),
         ),
         on="player_id",
     )
@@ -135,16 +138,18 @@ def availability_features(
         .join(shares, on="player_id", how="left")
         .with_columns(pl.col("ts", "rs").fill_null(0.0))
     )
-    out = (
-        pl.col("missed_last_game").fill_null(False)
-        | pl.col("left_last_game_early").fill_null(False)
-        | pl.col("roster_status_last_week").is_in(RESERVE_STATUSES).fill_null(False)
+    newly_out = pl.col("left_last_game_early").fill_null(False) | (
+        pl.col("played_prev_game").fill_null(False)
+        & (
+            pl.col("missed_last_game").fill_null(False)
+            | pl.col("roster_status_last_week").is_in(RESERVE_STATUSES).fill_null(False)
+        )
     )
-    freed_ts = pl.when(out).then(pl.col("ts")).otherwise(0.0)
-    freed_rs = pl.when(out).then(pl.col("rs")).otherwise(0.0)
+    freed_ts = pl.when(newly_out).then(pl.col("ts")).otherwise(0.0)
+    freed_rs = pl.when(newly_out).then(pl.col("rs")).otherwise(0.0)
     vacated = players.with_columns(
         (freed_ts.sum().over("team", "position") - freed_ts).alias("vacated_target_share_pos"),
         (freed_ts.sum().over("team") - freed_ts).alias("vacated_target_share_team"),
         (freed_rs.sum().over("team") - freed_rs).alias("vacated_rush_share_team"),
     )
-    return vacated.drop("team", "position", "ts", "rs")
+    return vacated.drop("team", "position", "ts", "rs", "played_prev_game")
