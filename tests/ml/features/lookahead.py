@@ -48,16 +48,25 @@ def corrupt_future(df: pl.DataFrame, as_of: Week, *, strings: bool) -> pl.DataFr
 
 
 def assert_no_lookahead(
-    fn: Callable[..., pl.DataFrame], inputs: dict[str, pl.DataFrame], as_of: Week
+    fn: Callable[..., pl.DataFrame],
+    inputs: dict[str, pl.DataFrame],
+    as_of: Week,
+    *,
+    known_in_advance: frozenset[str] = frozenset(),
 ) -> pl.DataFrame:
     """Assert ``fn(**inputs, as_of=as_of)`` is unchanged when future rows are corrupted.
 
-    Runs two corruptions (numbers only, then numbers and strings). Returns the clean output so
-    tests can also check values. Fails on an empty output, which would pass vacuously.
+    Runs two corruptions (numbers only, then numbers and strings). ``known_in_advance`` names
+    inputs exempt from corruption because they are published before the season, i.e. the
+    schedule's fixtures (never its results). Returns the clean output so tests can also check
+    values. Fails on an empty output, which would pass vacuously.
     """
     clean = fn(**inputs, as_of=as_of)
     assert clean.height, "feature output is empty; the lookahead check would be vacuous"
     for strings in (False, True):
-        corrupted = {k: corrupt_future(v, as_of, strings=strings) for k, v in inputs.items()}
+        corrupted = {
+            k: v if k in known_in_advance else corrupt_future(v, as_of, strings=strings)
+            for k, v in inputs.items()
+        }
         assert_frame_equal(clean, fn(**corrupted, as_of=as_of), check_row_order=False)
     return clean
