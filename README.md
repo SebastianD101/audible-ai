@@ -11,7 +11,7 @@ leakage-free walk-forward backtest against expert consensus.
 | --- | --- | --- |
 | 1 | Repo scaffold, tooling, CI | Done |
 | 2 | Data pipeline (nflverse) | Done: player stats, schedules + Vegas lines, weekly rosters, injuries, snap counts, ID crosswalk (2018-2025) |
-| 3 | Features | Not started |
+| 3 | Features | Done: 63 waiver-time features (usage, SOS-adjusted defense vs position, context, availability, vacated opportunity), leakage-tested |
 | 4 | Backtest harness + naive baseline | Not started |
 | 5 | LightGBM model + comparison | Not started |
 | 6 | Screenshot parsing | Not started |
@@ -26,6 +26,7 @@ No model results yet. Any results will be reported with sample sizes and bootstr
 ```
 ml/          data ingestion, features, models, backtests (no web code)
   ingest/    nflverse -> validated Parquet loaders (one DatasetSpec per dataset)
+  features/  leakage-free features as of waiver time (see docs/features.md)
   data/      gitignored Parquet output, reproducible via `python -m ml.ingest`
 backend/     FastAPI app
 frontend/    Next.js (App Router, TypeScript, Tailwind)
@@ -45,6 +46,9 @@ uv run pre-commit install
 # Data: every 2018-2025 dataset -> ml/data/raw/<dataset>/
 uv run python -m ml.ingest --start-season 2018 --end-season 2025
 # or one dataset: python -m ml.ingest.<weekly_stats|schedules|rosters_weekly|injuries|snap_counts|players>
+
+# Features: one row per (player, target week) -> ml/data/processed/features/
+uv run python -m ml.features.build --start-season 2018 --end-season 2025
 
 uv run fastapi dev backend/app/main.py     # http://localhost:8000/health
 cd frontend && npm install && npm run dev  # http://localhost:3000

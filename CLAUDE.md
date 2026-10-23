@@ -87,6 +87,7 @@ Finish and commit each phase before starting the next. Do not start a later phas
 - Frontend checks: `cd frontend && npm run lint && npm run typecheck && npm test`
 - Ingest all raw data: `uv run python -m ml.ingest --start-season 2018 --end-season 2025` (add `--force` to refresh)
 - Ingest one dataset: `uv run python -m ml.ingest.<weekly_stats|schedules|rosters_weekly|injuries|snap_counts|players>`
+- Build features: `uv run python -m ml.features.build --start-season 2018 --end-season 2025`
 - Backtest: `uv run python -m ml.backtest.run --start-season 2018 --end-season 2025`
 
 (Update these as the repo takes shape.)

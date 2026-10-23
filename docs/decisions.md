@@ -105,3 +105,62 @@ carries the same question.
 
 Raw data is gitignored, so a scheduled GitHub Action needs somewhere to put it (artifact,
 release asset, or bucket). That choice depends on where the API runs, so it moves to Phase 9.
+
+## 2026-10-22: Information cutoff is waiver time, not kickoff
+
+Features for target week W use only data from weeks before W, as known on the Tuesday night
+after week W-1 when waiver claims process. Week-W closing lines, injury designations, and
+practice reports are excluded; the published schedule (opponent, venue, rest) is allowed
+because it's released in May.
+
+- **Why:** the product recommends waiver pickups, so the backtest should only use what a
+  manager knows when making that decision. A model that quietly used Friday injury news or
+  closing lines would look better than it could ever be in use.
+- **What it buys:** one leakage rule (`(season, week) < W`) for every dataset, enforced by
+  `ml.features.asof.available_before` and tested by corrupting every future row.
+- **Cost:** the strongest pre-game signal, the Vegas total, isn't available. The stand-in
+  (points for/against before W) shows almost no signal. A Phase 5 "kickoff" ablation will add
+  week-W lines and designations to measure how much late-week information is worth.
+
+## 2026-10-22: Spine and labels
+
+- **Spine for week W (W >= 2):** fantasy-position players on a 53-man or reserve list in week
+  W-1 (ACT/INA/RES) or with a stat line earlier this season. Bye-week rows are dropped, and
+  week 1 is excluded (no in-season data and no prior-week roster yet).
+- **Coverage (2018-2025):** 99.48% of week-2+ PPR points. Most of the misses are debut starts
+  (e.g. Will Levis, 2023 week 8) that nobody could have rostered at waiver time.
+- **Practice squad and cut players** enter only through a stat line. Including them would make 58%
+  of rows trivial zeros instead of 44%, for +0.4 points of coverage. Trivial zeros flatter RMSE,
+  so Phase 4 must also report metrics on a fantasy-relevant subset.
+- **Label = 0 when the team played and the player didn't.** A pickup who sits is worth nothing, so
+  the target includes availability risk.
+- **Labels are named `label_*`.** The first draft used `target_*`, which collided with the
+  `target_share` feature. A guard that filtered "target*" columns would have dropped real
+  features, and one that only filtered exact names would miss future collisions.
+
+## 2026-10-22: SOS-adjusted defense vs position
+
+For each game a defense played before W, the residual is the opposing offense's points at a
+position minus that offense's average at the position in its other games before W
+(leave-one-out). The rating is the mean residual, shrunk toward 0.5 times the prior-season
+rating with K = 4 games. K and the 0.5 carry-over are fixed choices, not tuned. Controlling for
+player level, it correlates more strongly with the outcome than raw points allowed at all
+four positions (see `docs/features.md`).
+
+## 2026-10-22: Vacated opportunity counts only new absences
+
+The first version counted any teammate who missed the last game or was on reserve. That
+flagged 37% of WR/TE rows (season-long IR roles were redistributed long ago) and carried
+almost no signal: flagged WR/TE beat their season average by +0.14 PPG, vs +0.01 for the rest.
+Counting only teammates who played the game before last, or left the last game early, flags
+14% of WR/TE rows; those beat their season average by +0.21 (vs +0.03). For RBs with newly
+vacated rush share above 0.25 the gap is +0.68 vs +0.16.
+
+**Caveat:** this choice was made by looking at 2018-2025 outcomes. That's a small researcher
+degree of freedom on the training years; the untouched 2026 holdout is the guard against it.
+
+## 2026-10-22: Team codes normalized in the read layer
+
+Player stats use `LV` for the Raiders in 2018-2019, while schedules, rosters, injuries, and
+snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_id`s keep
+`OAK` (they agree across sources) and are treated as opaque keys.
