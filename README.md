@@ -12,14 +12,14 @@ leakage-free walk-forward backtest against expert consensus.
 | 1 | Repo scaffold, tooling, CI | Done |
 | 2 | Data pipeline (nflverse) | Done: player stats, schedules + Vegas lines, weekly rosters, injuries, snap counts, ID crosswalk (2018-2025) |
 | 3 | Features | Done: 63 waiver-time features (usage, SOS-adjusted defense vs position, context, availability, vacated opportunity), leakage-tested |
-| 4 | Backtest harness + naive baseline | Not started |
+| 4 | Backtest harness + naive baseline | Done: walk-forward harness, week-block bootstrap CIs, MLflow; baselines in [docs/backtest.md](docs/backtest.md) |
 | 5 | LightGBM model + comparison | Not started |
 | 6 | Screenshot parsing | Not started |
 | 7 | Optimizer | Not started |
 | 8 | API and UI | Not started |
 | 9 | Deployment and write-up | Not started |
 
-No model results yet. Any results will be reported with sample sizes and bootstrapped confidence intervals.
+Baseline results (2019-2025 walk-forward, 117 weeks, 95% CIs) are in [docs/backtest.md](docs/backtest.md). No ML model results yet. Weekly fantasy scoring is noisy, so every comparison is reported with sample sizes and paired bootstrap intervals.
 
 ## Layout
 
@@ -49,6 +49,10 @@ uv run python -m ml.ingest --start-season 2018 --end-season 2025
 
 # Features: one row per (player, target week) -> ml/data/processed/features/
 uv run python -m ml.features.build --start-season 2018 --end-season 2025
+
+# Backtest (walk-forward, 2019-2025; 2026 is the locked holdout) -> ml/data/backtest/, MLflow
+uv run python -m ml.backtest.run --start-season 2019 --end-season 2025
+uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db
 
 uv run fastapi dev backend/app/main.py     # http://localhost:8000/health
 cd frontend && npm install && npm run dev  # http://localhost:3000

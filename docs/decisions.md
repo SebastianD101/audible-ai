@@ -178,3 +178,26 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
   that were less than two weeks old (e.g. `certifi`, `coverage`, `httptools`, `numpy` patch
   releases) to older versions, and all checks pass. The date is a deliberate knob. Bump it when
   upgrading dependencies, then re-run CI.
+
+## 2026-10-23: Backtest protocol
+
+- **Walk-forward by target week.** A model predicting week W trains only on rows whose target
+  week precedes W, so its labels were known by waiver time. Weekly refit by default, or per
+  season to keep heavier models affordable. Random splits are never used.
+- **2019-2025 evaluation, 2018 burn-in, 2026 locked:** `HOLDOUT_SEASON = 2026` in
+  `ml.ingest.common`. The backtest CLI rejects it and filters its rows out on load, so the
+  holdout can't be touched by accident.
+- **Two scopes.** `all` rows are 44% zeros, which flatters every metric. `relevant` (top
+  QB 24 / RB 48 / WR 60 / TE 24 per week by pre-week PPG, with no labels and no model output) is
+  the headline scope.
+- **Within-(week, position) Spearman,** averaged over weeks. Pooled correlations mostly measure
+  that QBs outscore TEs.
+- **Week-block bootstrap with paired differences.** Rows in a week share game conditions, so
+  resampling rows would understate uncertainty. Each week reduces to sufficient statistics, so
+  1,000 draws for 136k predictions take seconds.
+- **Two baselines, and the stronger one is the bar.** CLAUDE.md names last-3. Season average turned
+  out better on every relevant-scope position (RMSE -0.31 [-0.37, -0.26] overall). Phase 5
+  must report against both; claiming a win over last-3 alone would be beating the weaker
+  baseline.
+- **Pickup-value metric and expert consensus deferred** to Phase 5 (FantasyPros terms check)
+  and Phase 7 (optimizer).
