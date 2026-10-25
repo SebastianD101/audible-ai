@@ -56,6 +56,8 @@ def schedule() -> pl.DataFrame:
             "away_rest": [7] * n,
             "div_game": [0] * n,
             "roof": ["outdoors"] * n,
+            "spread_line": [3.0] * n,
+            "total_line": [44.0] * n,
         },
         schema_overrides={"season": pl.Int32, "week": pl.Int32},
     )
@@ -164,5 +166,10 @@ def snaps() -> pl.DataFrame:
 def world() -> load.RawData:
     """Every synthetic frame bundled like ``load.load_raw``."""
     return load.RawData(
-        stats=stats(), games=games(), rosters=rosters(), injuries=injuries(), snaps=snaps()
+        stats=stats(),
+        games=games(),
+        rosters=rosters(),
+        injuries=injuries(),
+        snaps=snaps(),
+        lines=load.game_lines(schedule()),
     )

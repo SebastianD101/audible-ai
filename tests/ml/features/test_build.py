@@ -45,8 +45,29 @@ def test_built_features_ignore_everything_from_the_target_week_on() -> None:
         injuries=corrupt_future(world.injuries, as_of, strings=False),
         games=games,
     )
-    clean = build.week_features(world, as_of)
+    waiver = pl.exclude("^ko_.*$")
+    clean = build.week_features(world, as_of).select(waiver)
     assert clean.height == 5
+    assert_frame_equal(
+        clean, build.week_features(corrupted, as_of).select(waiver), check_row_order=False
+    )
+
+
+def test_kickoff_columns_ignore_everything_after_the_target_week() -> None:
+    """With the cutoff moved to kickoff, corrupting week W+1 onward changes nothing at all."""
+    as_of = Week(2023, 3)
+    after = Week(2023, 4)
+    world = syn.world()
+    corrupted = dataclasses.replace(
+        world,
+        stats=corrupt_future(world.stats, as_of, strings=False),
+        snaps=corrupt_future(world.snaps, as_of, strings=False),
+        rosters=corrupt_future(world.rosters, as_of, strings=False),
+        injuries=corrupt_future(world.injuries, after, strings=False),
+        lines=corrupt_future(world.lines, after, strings=False),
+    )
+    clean = build.week_features(world, as_of)
+    assert {"ko_total_line", "ko_report_severity"} <= set(clean.columns)
     assert_frame_equal(clean, build.week_features(corrupted, as_of), check_row_order=False)
 
 

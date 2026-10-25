@@ -73,6 +73,8 @@ RAW_COLUMNS = {
         "away_rest",
         "div_game",
         "roof",
+        "spread_line",
+        "total_line",
     ],
     "rosters_weekly": [
         "gsis_id",
@@ -115,6 +117,7 @@ class RawData:
     rosters: pl.DataFrame
     injuries: pl.DataFrame
     snaps: pl.DataFrame
+    lines: pl.DataFrame
 
 
 def normalize_teams(df: pl.DataFrame, columns: list[str]) -> pl.DataFrame:
@@ -197,6 +200,30 @@ def team_games(schedules: pl.DataFrame) -> pl.DataFrame:
     return pl.concat([home, away]).sort("season", "week", "team")
 
 
+def game_lines(schedules: pl.DataFrame) -> pl.DataFrame:
+    """Vegas lines, one row per team per regular-season game.
+
+    Columns: season, week, game_id, team, team_spread (points the team is favored by),
+    total_line. Kept apart from ``team_games`` on purpose: lines settle near kickoff, after
+    waivers, so only the kickoff ablation (``ml.features.kickoff``) reads this frame.
+    """
+    games = normalize_teams(
+        schedules.filter(pl.col("game_type") == "REG"), ["home_team", "away_team"]
+    )
+    common = ["season", "week", "game_id", "total_line"]
+    home = games.select(
+        *common, pl.col("home_team").alias("team"), pl.col("spread_line").alias("team_spread")
+    )
+    away = games.select(
+        *common, pl.col("away_team").alias("team"), (-pl.col("spread_line")).alias("team_spread")
+    )
+    return (
+        pl.concat([home, away])
+        .select("season", "week", "game_id", "team", "team_spread", "total_line")
+        .sort("season", "week", "team")
+    )
+
+
 def clean_rosters(raw: pl.DataFrame, players: pl.DataFrame) -> pl.DataFrame:
     """Regular-season weekly rosters at fantasy positions, one row per player-week.
 
@@ -262,9 +289,10 @@ def clean_snaps(raw: pl.DataFrame, players: pl.DataFrame) -> pl.DataFrame:
 def load_raw(raw_dir: Path = DEFAULT_RAW_DIR) -> RawData:
     """Read and clean every raw dataset."""
     players = pl.read_parquet(raw_dir / "players" / "players.parquet")
+    schedules = read_seasons(raw_dir, "schedules", RAW_COLUMNS["schedules"])
     return RawData(
         stats=clean_stats(read_seasons(raw_dir, "player_stats", RAW_COLUMNS["player_stats"])),
-        games=team_games(read_seasons(raw_dir, "schedules", RAW_COLUMNS["schedules"])),
+        games=team_games(schedules),
         rosters=clean_rosters(
             read_seasons(raw_dir, "rosters_weekly", RAW_COLUMNS["rosters_weekly"]), players
         ),
@@ -272,4 +300,5 @@ def load_raw(raw_dir: Path = DEFAULT_RAW_DIR) -> RawData:
         snaps=clean_snaps(
             read_seasons(raw_dir, "snap_counts", RAW_COLUMNS["snap_counts"]), players
         ),
+        lines=game_lines(schedules),
     )

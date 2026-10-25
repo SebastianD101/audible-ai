@@ -29,6 +29,7 @@ from ml.features.asof import Week
 from ml.features.availability import availability_features
 from ml.features.context import context_features
 from ml.features.defense import defense_features
+from ml.features.kickoff import kickoff_features
 from ml.features.load import DEFAULT_RAW_DIR, RawData, load_raw
 from ml.features.spine import LABEL_COLUMNS, SPINE_COLUMNS, add_labels, fixtures, spine
 from ml.features.usage import usage_features
@@ -48,7 +49,11 @@ RAW_MANIFESTS = [
 
 
 def week_features(raw: RawData, as_of: Week) -> pl.DataFrame:
-    """Return the spine joined with every feature for one target week (no labels)."""
+    """Return the spine joined with every feature for one target week (no labels).
+
+    ``ko_*`` columns follow the kickoff cutoff and exist only for the ablation (see
+    ``ml.features.kickoff``); everything else follows the waiver-time cutoff.
+    """
     fx = fixtures(raw.games)
     rows = spine(raw.stats, raw.rosters, fx, as_of)
     if rows.is_empty():
@@ -64,6 +69,7 @@ def week_features(raw: RawData, as_of: Week) -> pl.DataFrame:
             on="player_id",
             how="left",
         )
+        .join(kickoff_features(rows, raw.lines, raw.injuries, as_of), on="player_id", how="left")
     )
 
 
