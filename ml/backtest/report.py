@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import polars as pl
 
 from ml.backtest.metrics import (
@@ -14,7 +16,8 @@ from ml.backtest.metrics import (
 from ml.backtest.scopes import SCOPES, in_scope
 
 POSITIONS = ("ALL", "QB", "RB", "WR", "TE")
-REFERENCE_MODEL = "last3"
+# Every model is diffed against each baseline; season_avg is the stronger one (docs/backtest.md).
+REFERENCES = ("last3", "season_avg")
 
 
 def slice_rows(preds: pl.DataFrame, model: str, scope: str, position: str) -> pl.DataFrame:
@@ -24,7 +27,12 @@ def slice_rows(preds: pl.DataFrame, model: str, scope: str, position: str) -> pl
 
 
 def estimate_rows(
-    estimates: dict[str, Estimate], model: str, scope: str, position: str, kind: str
+    estimates: dict[str, Estimate],
+    model: str,
+    scope: str,
+    position: str,
+    kind: str,
+    reference: str | None = None,
 ) -> list[dict[str, object]]:
     """Flatten estimates into table rows."""
     return [
@@ -33,6 +41,7 @@ def estimate_rows(
             "scope": scope,
             "position": position,
             "kind": kind,
+            "reference": reference,
             "metric": e.metric,
             "point": e.point,
             "lo": e.lo,
@@ -44,19 +53,35 @@ def estimate_rows(
     ]
 
 
+def diff_pairs(models: Sequence[str], references: Sequence[str]) -> list[tuple[str, str]]:
+    """(model, reference) pairs to diff: every model vs every present reference but itself.
+
+    Between two references only the later-listed one is diffed against the earlier one, so the
+    baselines' comparison appears once.
+    """
+    refs = [r for r in references if r in models]
+    return [
+        (m, r)
+        for m in models
+        for r in refs
+        if m != r and not (m in refs and refs.index(m) < refs.index(r))
+    ]
+
+
 def metrics_table(
     preds: pl.DataFrame,
     *,
-    reference: str = REFERENCE_MODEL,
+    references: Sequence[str] = REFERENCES,
     n_boot: int = DEFAULT_BOOTSTRAP,
     seed: int = DEFAULT_SEED,
 ) -> pl.DataFrame:
-    """Metrics with intervals per (model, scope, position), plus paired diffs vs ``reference``.
+    """Metrics with intervals per (model, scope, position), plus paired diffs vs references.
 
-    ``kind`` is ``"value"`` for a model's own metric and ``"diff"`` for model minus reference
-    (negative RMSE/MAE diffs and positive Spearman diffs favour the model).
+    ``kind`` is ``"value"`` for a model's own metric and ``"diff"`` for model minus
+    ``reference`` (negative RMSE/MAE diffs and positive Spearman diffs favour the model).
     """
     models = preds["model"].unique(maintain_order=True).to_list()
+    pairs = diff_pairs(models, references)
     rows: list[dict[str, object]] = []
     for model in models:
         for scope in SCOPES:
@@ -65,11 +90,11 @@ def metrics_table(
                 if sub.is_empty():
                     continue
                 rows += estimate_rows(bootstrap(sub, n_boot, seed), model, scope, position, "value")
-                if model != reference and reference in models:
+                for reference in (r for m, r in pairs if m == model):
                     ref = slice_rows(preds, reference, scope, position)
                     diff = paired_bootstrap(sub, ref, n_boot, seed)
-                    rows += estimate_rows(diff, model, scope, position, "diff")
-    return pl.DataFrame(rows)
+                    rows += estimate_rows(diff, model, scope, position, "diff", reference)
+    return pl.DataFrame(rows, schema_overrides={"reference": pl.String})
 
 
 def fmt(point: float, lo: float, hi: float) -> str:
@@ -77,11 +102,18 @@ def fmt(point: float, lo: float, hi: float) -> str:
     return f"{point:.3f} [{lo:.3f}, {hi:.3f}]"
 
 
-def to_markdown(table: pl.DataFrame, reference: str = REFERENCE_MODEL) -> str:
-    """Render one table per scope (values) and one per scope (diffs vs ``reference``)."""
+def to_markdown(table: pl.DataFrame) -> str:
+    """Render one table per scope for values, and per scope and reference for diffs."""
     lines: list[str] = []
-    for kind, title in (("value", "Metrics"), ("diff", f"Difference vs `{reference}`")):
-        part = table.filter(pl.col("kind") == kind)
+    references = (
+        table.filter(pl.col("kind") == "diff")["reference"].unique(maintain_order=True).to_list()
+    )
+    blocks = [(pl.col("kind") == "value", "Metrics")] + [
+        ((pl.col("kind") == "diff") & (pl.col("reference") == r), f"Difference vs `{r}`")
+        for r in references
+    ]
+    for condition, title in blocks:
+        part = table.filter(condition)
         if part.is_empty():
             continue
         for scope in SCOPES:

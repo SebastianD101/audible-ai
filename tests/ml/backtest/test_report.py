@@ -38,3 +38,22 @@ def test_markdown_has_a_table_per_scope_and_kind() -> None:
     assert md.count("| Model | Position |") == 4
     assert "### Difference vs `last3`: `relevant` rows" in md
     assert "week-block bootstrap" in md
+
+
+def test_diff_pairs_compare_every_model_to_each_baseline_once() -> None:
+    assert report.diff_pairs(["last3", "season_avg", "lgbm"], report.REFERENCES) == [
+        ("season_avg", "last3"),
+        ("lgbm", "last3"),
+        ("lgbm", "season_avg"),
+    ]
+    assert report.diff_pairs(["lgbm"], report.REFERENCES) == []
+
+
+def test_markdown_has_a_diff_block_per_reference() -> None:
+    preds = predictions()
+    third = preds.filter(pl.col("model") == "season_avg").with_columns(
+        pl.lit("other").alias("model"), pl.col("prediction") + 1
+    )
+    md = report.to_markdown(report.metrics_table(pl.concat([preds, third]), n_boot=20))
+    assert "### Difference vs `last3`: `all` rows" in md
+    assert "### Difference vs `season_avg`: `all` rows" in md
