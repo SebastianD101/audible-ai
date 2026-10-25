@@ -76,3 +76,17 @@ def test_importance_lists_every_feature() -> None:
 def test_predict_before_fit_raises() -> None:
     with pytest.raises(RuntimeError):
         LgbmPredictor().predict(feature_table())
+
+
+def test_tweedie_trains_on_negative_labels_by_flooring_them() -> None:
+    df = noisy_table().with_columns(
+        pl.when(pl.col("player_id") == "q1")
+        .then(-2.0)
+        .otherwise(pl.col("label_ppr"))
+        .alias("label_ppr")
+    )
+    tweedie = LgbmPredictor(LgbmParams(n_estimators=10, min_data_in_leaf=2, objective="tweedie"))
+    tweedie.fit(df)
+    assert tweedie.training_label(df).min() == 0.0
+    l2 = LgbmPredictor(SMALL)
+    assert l2.training_label(df).min() == -2.0

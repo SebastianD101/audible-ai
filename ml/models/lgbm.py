@@ -86,7 +86,7 @@ class LgbmPredictor:
         self.columns = feature_columns(train.drop(LABEL), kickoff=self.kickoff)
         data = lgb.Dataset(
             to_matrix(train, self.columns),
-            label=train[LABEL].cast(pl.Float64).to_numpy(),
+            label=self.training_label(train),
             feature_name=self.columns,
             categorical_feature=categorical_indices(self.columns),
             free_raw_data=True,
@@ -96,6 +96,15 @@ class LgbmPredictor:
             data,
             num_boost_round=self.params.n_estimators,
         )
+
+    def training_label(self, train: pl.DataFrame) -> np.ndarray:
+        """``label_ppr``, floored at 0 for Tweedie, which rejects negative targets.
+
+        Interceptions and fumbles make 0.6% of labels negative (mean -0.6). Evaluation always
+        uses the true labels.
+        """
+        label = train[LABEL].cast(pl.Float64).to_numpy()
+        return np.maximum(label, 0.0) if self.params.objective == "tweedie" else label
 
     def predict(self, features: pl.DataFrame) -> pl.Series:
         """Projected PPR points, clipped at 0.
