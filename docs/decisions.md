@@ -201,3 +201,68 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
   baseline.
 - **Pickup-value metric and expert consensus deferred** to Phase 5 (FantasyPros terms check)
   and Phase 7 (optimizer).
+
+## 2026-10-25: LightGBM and Optuna versions
+
+- **LightGBM 4.7.0** (Jul 18) and **Optuna 4.9.0** (Jun 1), both in the `ml` group, so the
+  backend image doesn't carry them. Optuna 5.0.0 (Sep 7) clears the `exclude-newer` floor, but
+  it's a new major with breaking changes and no patch release yet, so the mature 4.x line was
+  chosen (the same reasoning that skipped MLflow 3.17).
+
+## 2026-10-25: Projection model design
+
+- **One LightGBM model for all positions,** with `position` as a categorical. A per-position
+  model would have a quarter of the data, and the trees can still split on position. Trained on
+  every spine row with `label_ppr`, zeros included, because predicting who won't play is part
+  of the task (21% of relevant player-weeks score 0).
+- **Objective tuned between L2 and Tweedie.** Labels are mostly non-negative with a spike at
+  zero, which Tweedie models directly. L2 is the natural choice when the metric is RMSE. The
+  search picks per season. Predictions are clipped at 0.
+- **Negative labels:** interceptions and fumbles lost make 0.64% of labels negative (492 of
+  77,031; mean -0.59, min -6.66; mostly QBs). Tweedie rejects negative targets, so it trains on
+  labels floored at 0, while L2 trains on the raw labels. Every metric is scored on the true
+  labels. The first full run crashed on this, which is how it was found.
+- **Fixed categorical codes** (`ml/models/matrix.py`): a hard-coded vocabulary, so a code means
+  the same category in every weekly refit. Rare roster statuses (<0.1% of rows) share an
+  `other` code. `last_report_status` is dropped as a duplicate of `last_report_severity`.
+- **Reproducibility:** seeded bagging, `deterministic=True`, `force_row_wise=True`, and a fixed
+  thread count (4), so a rerun gives identical predictions. A test checks this.
+- **No early stopping on the test week.** Tree count is a tuned hyperparameter, chosen on the
+  validation season.
+
+## 2026-10-25: Nested walk-forward tuning
+
+- For evaluation season S, Optuna (seeded TPE, 40 trials) fits on seasons before S-1 and scores
+  RMSE on season S-1's `relevant` rows. The winner is then refit weekly through S. Season S
+  never enters tuning, so its backtest score stays out-of-sample. Tuning on a random split, or
+  once on 2019-2025, would leak.
+- **Headline evaluation is 2020-2025** (101 target weeks): 2020 is the first season with two prior
+  seasons of features (train on 2018, validate on 2019). Baselines are re-scored on the same
+  weeks so differences stay paired.
+- **Search space** (`ml/models/tune.py`): learning rate, trees, leaves, min leaf size, feature
+  and bagging fractions, L2, objective, Tweedie power. It's kept small: each season's choice
+  is made on one season of noisy weekly data, and a large space would overfit that season.
+- Each season's params and validation RMSE are an MLflow child run under the model's run.
+
+## 2026-10-25: Kickoff-information ablation
+
+- The product is a Tuesday waiver tool, so its features stop at the waiver cutoff. To measure
+  what that costs, `ml/features/kickoff.py` adds `ko_*` columns under a **kickoff** cutoff:
+  week-W spread, total, and implied team total, plus the week-W injury designation and final
+  practice level. They're tested to ignore everything after week W, and they never read
+  results.
+- Lines are a separate `RawData.lines` frame rather than columns on `games`, so no waiver-time
+  feature can read them by accident. `ml.models.matrix.feature_columns` drops `ko_*` unless
+  asked. Only the `lgbm_kickoff` model uses them, and it's reported as an ablation, not as the
+  model.
+
+## 2026-10-25: Expert consensus deferred
+
+- FantasyPros' terms of use prohibit scraping and automated access to their rankings, and
+  their historical weekly ECR archive is a paid feature. So no expert rankings are fetched or
+  stored. The CLAUDE.md requirement to compare against experts is **not yet met**, and the docs
+  say so instead of implying it.
+- **Path to close it:** a permitted source (a licensed export, or openly published historical
+  ECR) gets a loader that emits per-(player, week) rankings. The harness can score those like
+  any predictor: Spearman by (week, position) needs only ranks, and the paired bootstrap applies
+  unchanged.
