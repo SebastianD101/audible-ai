@@ -24,7 +24,9 @@ dev = [
 ]
 # Training and experiment tracking only; kept out of the backend image.
 ml = [
+    "lightgbm==4.7.0",
     "mlflow==3.16.1",
+    "optuna==4.9.0",
 ]
 
 [tool.uv]
