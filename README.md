@@ -13,13 +13,13 @@ leakage-free walk-forward backtest against expert consensus.
 | 2 | Data pipeline (nflverse) | Done: player stats, schedules + Vegas lines, weekly rosters, injuries, snap counts, ID crosswalk (2018-2025) |
 | 3 | Features | Done: 63 waiver-time features (usage, SOS-adjusted defense vs position, context, availability, vacated opportunity), leakage-tested |
 | 4 | Backtest harness + naive baseline | Done: walk-forward harness, week-block bootstrap CIs, MLflow; baselines in [docs/backtest.md](docs/backtest.md) |
-| 5 | LightGBM model + comparison | Not started |
+| 5 | LightGBM model + comparison | Done: nested-tuned LightGBM vs both baselines, kickoff-information ablation; expert consensus deferred (terms of use) |
 | 6 | Screenshot parsing | Not started |
 | 7 | Optimizer | Not started |
 | 8 | API and UI | Not started |
 | 9 | Deployment and write-up | Not started |
 
-Baseline results (2019-2025 walk-forward, 117 weeks, 95% CIs) are in [docs/backtest.md](docs/backtest.md). No ML model results yet. Weekly fantasy scoring is noisy, so every comparison is reported with sample sizes and paired bootstrap intervals.
+Results are in [docs/backtest.md](docs/backtest.md). On 2020-2025 walk-forward (101 weeks, 15,756 relevant player-weeks), LightGBM beats the stronger baseline (season average) by 1.89 RMSE [1.80, 2.01] and +0.28 weekly Spearman [0.27, 0.30]. Most of that gain comes from knowing who won't play. There's no expert-consensus comparison yet, so nothing here is a claim about beating experts. Weekly fantasy scoring is noisy, so every comparison is reported with sample sizes and paired bootstrap intervals.
 
 ## Layout
 

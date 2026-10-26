@@ -236,9 +236,9 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
   RMSE on season S-1's `relevant` rows. The winner is then refit weekly through S. Season S
   never enters tuning, so its backtest score stays out-of-sample. Tuning on a random split, or
   once on 2019-2025, would leak.
-- **Headline evaluation is 2020-2025** (101 target weeks): 2020 is the first season with two prior
-  seasons of features (train on 2018, validate on 2019). Baselines are re-scored on the same
-  weeks so differences stay paired.
+- **Headline evaluation is 2020-2025** (101 target weeks): 2020 is the first season with two
+  prior seasons of features (train on 2018, validate on 2019). Baselines are re-scored on the
+  same weeks so differences stay paired.
 - **Search space** (`ml/models/tune.py`): learning rate, trees, leaves, min leaf size, feature
   and bagging fractions, L2, objective, Tweedie power. It's kept small: each season's choice
   is made on one season of noisy weekly data, and a large space would overfit that season.
