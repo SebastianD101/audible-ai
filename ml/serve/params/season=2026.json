@@ -1,0 +1,21 @@
+{
+  "season": 2026,
+  "params": {
+    "objective": "regression",
+    "learning_rate": 0.021525131120688525,
+    "n_estimators": 600,
+    "num_leaves": 20,
+    "min_data_in_leaf": 118,
+    "feature_fraction": 0.6556647253236163,
+    "bagging_fraction": 0.6398144785243873,
+    "lambda_l2": 0.1628483951619897,
+    "tweedie_variance_power": 1.5
+  },
+  "tuned": true,
+  "validation_season": 2025,
+  "validation_relevant_rmse": 7.481946098047527,
+  "trials": 40,
+  "git_commit": "4d37d264632f407ac772d1d0ca2ddd6e77741263",
+  "features_manifest_sha256": "11aaf0fc86c5974d8afee5379bec69abdaca7dc28a15fd9a249f828dbb01f678",
+  "written_at_utc": "2026-10-27T23:13:33+00:00"
+}
