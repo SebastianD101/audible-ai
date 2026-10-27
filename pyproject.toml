@@ -5,15 +5,18 @@ description = "Screenshot-to-waiver-wire recommendations for fantasy football"
 readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
+    "alembic==1.20.0",
     "anthropic==1.12.1",
     "fastapi[standard]==0.142.4",
     "nflreadpy==0.1.5",
     "numpy==2.5.3",
     "polars==1.44.2",
+    "psycopg[binary]==3.3.6",
     "pulp==3.3.2",
     "pyarrow==25.0.1",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
+    "sqlalchemy==2.1.4",
 ]
 
 [dependency-groups]
@@ -65,4 +68,7 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra --strict-markers -m 'not network'"
-markers = ["network: hits the real nflverse API (deselected by default; run with -m network)"]
+markers = [
+    "network: hits the real nflverse API (deselected by default; run with -m network)",
+    "postgres: needs a Postgres at TEST_DATABASE_URL (skipped when unset; CI runs it)",
+]
