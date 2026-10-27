@@ -52,7 +52,7 @@ def test_team_bonus_does_not_lift_a_weak_name_into_a_match(index: PlayerIndex) -
 
 def test_shared_surname_alone_is_not_a_match(index: PlayerIndex) -> None:
     # A player missing from the index must not snap onto a teammate-of-surname.
-    result = match_player(extracted("Kyle Jefferson", "WR"), index)
+    result = match_player(extracted("Kevin Jefferson", "WR"), index)
     assert result.status == "unmatched"
     assert [c.player_id for c in result.candidates] == ["00-001"]  # still offered for review
 
