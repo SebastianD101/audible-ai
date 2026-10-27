@@ -90,6 +90,7 @@ Finish and commit each phase before starting the next. Do not start a later phas
 - Build features: `uv run python -m ml.features.build --start-season 2018 --end-season 2025`
 - Backtest: `uv run python -m ml.backtest.run --start-season 2020 --end-season 2025` (default models `last3,season_avg,lgbm`; add `lgbm_kickoff` for the ablation; `--no-tune` skips Optuna, `--trials N` sets its budget; 2018-2019 are tuning history; 2026 is rejected)
 - MLflow UI: `uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db`
+- Pickup backtest (reuses the newest backtest run's predictions): `uv run python -m ml.backtest.pickups --start-season 2020 --end-season 2025` (`--rosters N`, `--max-moves 1,2`, `--predictions <path>`; about 20 min)
 - Current-season rosters (ID lookup for parsing only, never training): `uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026`
 - Parse a screenshot (real, billed API call): `uv run python -m backend.app.parsing <image> [--season 2026]`
 

@@ -302,3 +302,42 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
   are held in memory and never written to disk.
 - **Extraction accuracy is not yet measured.** It needs a labeled set of real screenshots (see
   `docs/parsing.md`). Until then, no accuracy claim is made.
+
+## 2026-10-27: Optimizer (Phase 7)
+
+- **PuLP pinned at 3.3.2.** 4.0.0 (2026-09-25) is a brand-new major rewrite, so it was skipped
+  as Polars 2.0 was. PuLP 3.3 deprecates its bundled `PULP_CBC_CMD` in favour of 4.x's
+  `pulp[cbc]` + `COIN_CMD`; `ml.optimize.swaps.cbc_solver` silences that one notice. Switch
+  solvers when upgrading.
+- **Lineups are set greedily, and that's exact.** The supported slot types are nested: each
+  position slot sits inside FLEX, which sits inside SUPERFLEX. Filling them in that order with
+  the best remaining eligible player is optimal by an exchange argument. Tests check this
+  against brute force on random rosters. It's fast enough for 30k backtest evaluations.
+- **Swaps are a small MILP.** It has keep, add, and start binaries; adds equal drops; at most k
+  adds; and only owned players start. The objective is projected starter points, minus 0.01
+  per add (no churn for zero gain), plus a tiny bonus for keeping higher-value players (so a
+  bench drop removes the least valuable player). Free agents are pruned exactly to the top k
+  per position first. Tests check the result against brute force over all ≤k-swap sets.
+  Variables are created in sorted order, because set order varies between processes and CBC's
+  choice among tied optima would otherwise not be reproducible.
+- **One-week horizon, with a guard.** Projections are next-week only, so a pure optimizer
+  would drop an injured star projected near 0. Roster players who would start on `hold_values`
+  (a longer-horizon value; `season_avg` in the backtest) can't be dropped. Neither can locked
+  players or anyone without a projection: byes, K/DST, and unmatched names. Rest-of-season
+  value isn't modeled; that's the main limitation of the recommendations.
+- **K and DST are outside the optimizer.** They aren't projected, so a swap can't change their
+  contribution, and they're excluded from lineup value. `LeagueSettings` rejects K/DST slots
+  with an explanation rather than silently ignoring them.
+- **PPR only.** `scoring` is `Literal["ppr"]`; half-PPR and standard need models trained on
+  those labels.
+- **Pickup backtest design.**
+  - It reuses the Phase 5 run's out-of-sample walk-forward predictions, so there's no
+    retraining and no new leakage path.
+  - Ownership is proxied by the top 156 (12 teams × 13) `season_avg` predictions. That
+    uses only data from before W and is neutral between the compared models.
+  - Seeded rosters are drawn from that pool (2 QB / 4 RB / 5 WR / 2 TE).
+  - Every source uses the same `season_avg` hold guard.
+  - Pickup gain is measured against each source's own no-move lineup. End-to-end lineup
+    points are compared across sources on the same rosters, and include knowing who to start.
+  - An oracle (actual points) gives an upper bound for scale.
+  - CIs come from a week-block bootstrap with shared draws, so the differences are paired.

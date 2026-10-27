@@ -15,11 +15,11 @@ leakage-free walk-forward backtest against expert consensus.
 | 4 | Backtest harness + naive baseline | Done: walk-forward harness, week-block bootstrap CIs, MLflow; baselines in [docs/backtest.md](docs/backtest.md) |
 | 5 | LightGBM model + comparison | Done: nested-tuned LightGBM vs both baselines, kickoff-information ablation; expert consensus deferred (terms of use) |
 | 6 | Screenshot parsing | Done: Claude vision + structured outputs to validated roster JSON, matched to nflverse IDs with per-player review flags ([docs/parsing.md](docs/parsing.md)); extraction accuracy not yet measured |
-| 7 | Optimizer | Not started |
+| 7 | Optimizer | Done: MILP add/drop recommender (PuLP/CBC) with a season-value drop guard, plus a historical pickup backtest ([docs/pickups.md](docs/pickups.md)); PPR only |
 | 8 | API and UI | Not started |
 | 9 | Deployment and write-up | Not started |
 
-Results are in [docs/backtest.md](docs/backtest.md). On 2020-2025 walk-forward (101 weeks, 15,756 relevant player-weeks), LightGBM beats the stronger baseline (season average) by 1.89 RMSE [1.80, 2.01] and +0.28 weekly Spearman [0.27, 0.30]. Most of that gain comes from knowing who won't play. There's no expert-consensus comparison yet, so nothing here is a claim about beating experts. Weekly fantasy scoring is noisy, so every comparison is reported with sample sizes and paired bootstrap intervals.
+Results are in [docs/backtest.md](docs/backtest.md). On 2020-2025 walk-forward (101 weeks, 15,756 relevant player-weeks), LightGBM beats the stronger baseline (season average) by 1.89 RMSE [1.80, 2.01] and +0.28 weekly Spearman [0.27, 0.30]. Most of that gain comes from knowing who won't play. In a simulated-league pickup backtest ([docs/pickups.md](docs/pickups.md), 5,050 roster-weeks), acting on LightGBM's one-move recommendation gains 1.98 [1.27, 2.75] real points per week, against 0.48 [−0.32, 1.37] for last-3-driven moves (paired difference +1.50 [0.36, 2.53]). There's no expert-consensus comparison yet, so nothing here is a claim about beating experts. Weekly fantasy scoring is noisy, so every comparison is reported with sample sizes and paired bootstrap intervals.
 
 ## Layout
 
