@@ -5,6 +5,7 @@ description = "Screenshot-to-waiver-wire recommendations for fantasy football"
 readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
+    "anthropic==1.12.1",
     "fastapi[standard]==0.142.4",
     "nflreadpy==0.1.5",
     "numpy==2.5.3",
