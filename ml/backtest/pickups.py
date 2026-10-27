@@ -16,22 +16,44 @@ manager would start.
   lineup before and after the recommended moves, and their difference (pickup gain).
 
 The 2026 holdout season is rejected; this module never reads it.
+
+Usage:
+    uv run python -m ml.backtest.pickups --start-season 2020 --end-season 2025
+
+Writes ``ml/data/backtest/pickups-<timestamp>-<commit>/`` (``results.parquet``,
+``metrics.parquet``, ``metrics.md``) and one MLflow run.
 """
 
 from __future__ import annotations
 
+import argparse
+import json
+import logging
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 
+import mlflow
 import numpy as np
 import polars as pl
 
 from ml.backtest.metrics import DEFAULT_BOOTSTRAP, DEFAULT_SEED, Estimate, week_draws
+from ml.backtest.run import (
+    DEFAULT_ARTIFACT_DIR,
+    DEFAULT_OUT_DIR,
+    DEFAULT_TRACKING_URI,
+    mlflow_experiment,
+)
+from ml.features.build import git_commit
 from ml.ingest import common
 from ml.optimize.league import LeagueSettings, Player
 from ml.optimize.lineup import Lineup
 from ml.optimize.swaps import recommend
 
+logger = logging.getLogger(__name__)
+
+RUN_PREFIX = "pickups-"
 MODEL_SOURCES = ("lgbm", "last3")
 ORACLE = "oracle"
 OWNERSHIP_SOURCE = "season_avg"
@@ -182,10 +204,10 @@ def simulate_week(
 def simulate(wide: pl.DataFrame, settings: LeagueSettings, config: SimConfig) -> pl.DataFrame:
     """Run ``simulate_week`` over every (season, week) in ``wide``, with one seeded RNG."""
     rng = np.random.default_rng(config.seed)
-    frames = [
-        simulate_week(week, settings, config, rng)
-        for _, week in wide.group_by(["season", "week"], maintain_order=True)
-    ]
+    frames = []
+    for (season, week_no), week in wide.group_by(["season", "week"], maintain_order=True):
+        frames.append(simulate_week(week, settings, config, rng))
+        logger.info("pickups: simulated %s week %s", season, week_no)
     return pl.concat(frames)
 
 
@@ -301,3 +323,114 @@ def fmt_table(table: pl.DataFrame, order: Sequence[str]) -> str:
         n = at_k.filter(pl.col("metric") == "realized_gain").row(0, named=True)
         lines += ["", f"n = {n['n_rows']} rosters over {n['n_weeks']} weeks.", ""]
     return "\n".join(lines)
+
+
+METRIC_ORDER = (
+    "realized_gain",
+    "realized_after",
+    "projected_gain",
+    "move_rate",
+    "hit_rate",
+)
+
+
+def latest_predictions(out_dir: Path) -> Path:
+    """The newest walk-forward run's ``predictions.parquet`` under ``out_dir``.
+
+    Raises:
+        FileNotFoundError: if no backtest run has written predictions yet.
+    """
+    runs = sorted(
+        p for p in out_dir.glob("*/predictions.parquet") if not p.parent.name.startswith(RUN_PREFIX)
+    )
+    if not runs:
+        raise FileNotFoundError(
+            f"no predictions under {out_dir}; run `uv run python -m ml.backtest.run` first"
+        )
+    return runs[-1]
+
+
+def flat_metrics(table: pl.DataFrame) -> dict[str, float]:
+    """MLflow metric dict, e.g. ``k1.lgbm.realized_gain`` / ``_lo`` / ``_hi``."""
+    out: dict[str, float] = {}
+    for r in table.iter_rows(named=True):
+        source = str(r["source"]).replace(" - ", "_minus_")
+        key = f"k{r['max_moves']}.{source}.{r['metric']}"
+        out[key], out[f"{key}_lo"], out[f"{key}_hi"] = r["point"], r["lo"], r["hi"]
+    return {k: v for k, v in out.items() if v == v}  # drop NaN
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse command-line arguments; rejects the holdout season."""
+    parser = argparse.ArgumentParser(description=common.first_line(__doc__))
+    parser.add_argument("--start-season", type=int, default=2020)
+    parser.add_argument("--end-season", type=int, default=common.DEFAULT_END_SEASON)
+    parser.add_argument("--predictions", type=Path, help="defaults to the newest backtest run")
+    parser.add_argument("--rosters", type=int, default=DEFAULT_ROSTERS_PER_WEEK)
+    parser.add_argument("--teams", type=int, default=DEFAULT_TEAMS)
+    parser.add_argument("--max-moves", default="1,2", help="comma-separated move limits")
+    parser.add_argument("--min-gain", type=float, default=SimConfig.min_gain)
+    parser.add_argument("--bootstrap", type=int, default=DEFAULT_BOOTSTRAP)
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
+    parser.add_argument("--tracking-uri", default=DEFAULT_TRACKING_URI)
+    parser.add_argument("--artifact-dir", type=Path, default=DEFAULT_ARTIFACT_DIR)
+    args = common.parse_season_args(parser, argv)
+    if args.end_season >= common.HOLDOUT_SEASON:
+        parser.error(f"{common.HOLDOUT_SEASON}+ is the live holdout; backtests stop at 2025")
+    return args
+
+
+def main(argv: list[str] | None = None) -> None:
+    """CLI entry point."""
+    common.configure_logging()
+    args = parse_args(argv)
+    config = SimConfig(
+        n_teams=args.teams,
+        rosters_per_week=args.rosters,
+        max_moves=tuple(int(k) for k in args.max_moves.split(",")),
+        min_gain=args.min_gain,
+        seed=args.seed,
+    )
+    settings = LeagueSettings()
+    source = args.predictions or latest_predictions(args.out_dir)
+    commit = git_commit()
+    run_id = f"{RUN_PREFIX}{datetime.now(UTC):%Y%m%dT%H%M%SZ}-{commit[:7]}"
+    logger.info("pickups %s: reading %s", run_id, source)
+
+    wide = wide_predictions(pl.read_parquet(source), args.start_season, args.end_season)
+    results = simulate(wide, settings, config)
+    table = summarize(results, n_boot=args.bootstrap, seed=args.seed)
+
+    run_dir = args.out_dir / run_id
+    common.write_parquet_atomic(results, run_dir / "results.parquet")
+    common.write_parquet_atomic(table, run_dir / "metrics.parquet")
+    (run_dir / "metrics.md").write_text(fmt_table(table, METRIC_ORDER), encoding="utf-8")
+
+    experiment_id = mlflow_experiment(args.tracking_uri, args.artifact_dir)
+    with mlflow.start_run(experiment_id=experiment_id, run_name=run_id) as run:
+        mlflow.log_params(
+            {
+                "kind": "pickups",
+                "seasons": f"{args.start_season}-{args.end_season}",
+                **{k: str(v) for k, v in asdict(config).items()},
+                "slots": json.dumps(settings.slots, sort_keys=True),
+                "bootstrap": args.bootstrap,
+            }
+        )
+        mlflow.set_tags(
+            {
+                "git_commit": commit,
+                "predictions_path": str(source),
+                "predictions_sha256": common.sha256_file(source),
+            }
+        )
+        mlflow.log_metrics(flat_metrics(table))
+        mlflow.log_artifact(str(run_dir / "metrics.md"))
+        mlflow.log_artifact(str(run_dir / "metrics.parquet"))
+    logger.info("pickups %s: %d outcomes, results in %s", run_id, results.height, run_dir)
+    logger.info("mlflow run: %s", run.info.run_id)
+
+
+if __name__ == "__main__":
+    main()

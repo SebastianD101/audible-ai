@@ -1,7 +1,11 @@
+from pathlib import Path
+
+import mlflow
 import numpy as np
 import polars as pl
 import pytest
 
+from ml.backtest import pickups
 from ml.backtest.pickups import (
     DEFAULT_COMPOSITION,
     SimConfig,
@@ -167,3 +171,44 @@ def test_summary_point_estimates_match_hand_computation() -> None:
     assert point("lgbm - last3", "realized_after") == pytest.approx(2.5)
     assert point("last3", "move_rate") == pytest.approx(0.5)
     assert point("last3", "hit_rate") == pytest.approx(1.0)
+
+
+def test_cli_writes_results_and_logs_to_mlflow(tmp_path: Path) -> None:
+    run_dir = tmp_path / "backtest" / "20240101T000000Z-abc1234"
+    run_dir.mkdir(parents=True)
+    long_predictions(weeks=range(2, 4)).write_parquet(run_dir / "predictions.parquet")
+    pickups.main(
+        [
+            "--start-season", "2024", "--end-season", "2024",
+            "--teams", "2", "--rosters", "2", "--max-moves", "1", "--bootstrap", "50",
+            "--out-dir", str(tmp_path / "backtest"),
+            "--tracking-uri", f"sqlite:///{(tmp_path / 'mlflow.db').as_posix()}",
+            "--artifact-dir", str(tmp_path / "artifacts"),
+        ]
+    )  # fmt: skip
+    (out,) = [p for p in (tmp_path / "backtest").iterdir() if p.name.startswith("pickups-")]
+    assert pl.read_parquet(out / "results.parquet").height == 2 * 2 * 3
+    assert "lgbm - last3" in (out / "metrics.md").read_text(encoding="utf-8")
+
+    mlflow.set_tracking_uri(f"sqlite:///{(tmp_path / 'mlflow.db').as_posix()}")
+    (run,) = mlflow.search_runs(search_all_experiments=True, output_format="list")
+    assert run.data.params["kind"] == "pickups"
+    assert run.data.tags["predictions_sha256"]
+    assert "k1.lgbm_minus_last3.realized_gain" in run.data.metrics
+
+
+def test_latest_predictions_skips_pickup_runs(tmp_path: Path) -> None:
+    for name in ("20240101T000000Z-aaa", "20240202T000000Z-bbb", "pickups-20240303T000000Z-c"):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "predictions.parquet").write_bytes(b"")
+    assert pickups.latest_predictions(tmp_path).parent.name == "20240202T000000Z-bbb"
+
+
+def test_latest_predictions_explains_missing_run(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match=r"ml\.backtest\.run"):
+        pickups.latest_predictions(tmp_path)
+
+
+def test_cli_rejects_holdout() -> None:
+    with pytest.raises(SystemExit):
+        pickups.parse_args(["--end-season", "2026"])
