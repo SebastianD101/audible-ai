@@ -93,6 +93,13 @@ Finish and commit each phase before starting the next. Do not start a later phas
 - Pickup backtest (reuses the newest backtest run's predictions): `uv run python -m ml.backtest.pickups --start-season 2020 --end-season 2025` (`--rosters N`, `--max-moves 1,2`, `--predictions <path>`; about 20 min)
 - Current-season rosters (ID lookup for parsing only, never training): `uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026`
 - Parse a screenshot (real, billed API call): `uv run python -m backend.app.parsing <image> [--season 2026]`
+- Live data refresh: the same ingest commands with `--start-season 2026 --end-season 2026` (weekly_stats, schedules, injuries, snap_counts, rosters_weekly)
+- Serving params (tunes on <=2025 only; commit the JSON): `uv run python -m ml.serve.params --season 2026`
+- Weekly projections (refuses until week W-1 is final): `uv run python -m ml.serve.project --season 2026 --week W`
+- DB migrations: `uv run alembic -c backend/alembic.ini upgrade head` (`DATABASE_URL` unset -> local SQLite `audible.db`)
+- Full stack in Docker (Postgres + migrate + API): `docker compose up --build`
+- Postgres migration test locally: set `TEST_DATABASE_URL` and run `uv run pytest -m postgres`
+- After an intended API change: `UPDATE_OPENAPI=1 uv run pytest tests/backend/api` and update `frontend/lib/api.ts`
 
 (Update these as the repo takes shape.)
 

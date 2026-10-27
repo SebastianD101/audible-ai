@@ -16,7 +16,7 @@ leakage-free walk-forward backtest against expert consensus.
 | 5 | LightGBM model + comparison | Done: nested-tuned LightGBM vs both baselines, kickoff-information ablation; expert consensus deferred (terms of use) |
 | 6 | Screenshot parsing | Done: Claude vision + structured outputs to validated roster JSON, matched to nflverse IDs with per-player review flags ([docs/parsing.md](docs/parsing.md)); extraction accuracy not yet measured |
 | 7 | Optimizer | Done: MILP add/drop recommender (PuLP/CBC) with a season-value drop guard, plus a historical pickup backtest ([docs/pickups.md](docs/pickups.md)); PPR only |
-| 8 | API and UI | Not started |
+| 8 | API and UI | Done: weekly live projections job (2026 refits, tuning only on ≤2025), FastAPI endpoints with Postgres/Alembic persistence (never images), Next.js upload → review → recommendation flow showing backtest evidence ([docs/api.md](docs/api.md)) |
 | 9 | Deployment and write-up | Not started |
 
 Results are in [docs/backtest.md](docs/backtest.md). On 2020-2025 walk-forward (101 weeks, 15,756 relevant player-weeks), LightGBM beats the stronger baseline (season average) by 1.89 RMSE [1.80, 2.01] and +0.28 weekly Spearman [0.27, 0.30]. Most of that gain comes from knowing who won't play. In a simulated-league pickup backtest ([docs/pickups.md](docs/pickups.md), 5,050 roster-weeks), acting on LightGBM's one-move recommendation gains 1.98 [1.27, 2.75] real points per week, against 0.48 [−0.32, 1.37] for last-3-driven moves (paired difference +1.50 [0.36, 2.53]). There's no expert-consensus comparison yet, so nothing here is a claim about beating experts. Weekly fantasy scoring is noisy, so every comparison is reported with sample sizes and paired bootstrap intervals.
@@ -28,7 +28,11 @@ ml/          data ingestion, features, models, backtests (no web code)
   ingest/    nflverse -> validated Parquet loaders (one DatasetSpec per dataset)
   features/  leakage-free features as of waiver time (see docs/features.md)
   data/      gitignored Parquet output, reproducible via `python -m ml.ingest`
-backend/     FastAPI app
+  optimize/  lineup and add/drop MILP (PuLP/CBC)
+  serve/     weekly live projections job and committed serving params
+backend/     FastAPI app (see docs/api.md)
+  app/api/      HTTP routes: projections, search, parse, recommendations
+  app/db/       SQLAlchemy models; migrations in backend/alembic/
   app/parsing/  screenshot -> validated, ID-matched roster (see docs/parsing.md)
 frontend/    Next.js (App Router, TypeScript, Tailwind)
 tests/       pytest suite mirroring ml/ and backend/
@@ -59,8 +63,17 @@ uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db
 uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026
 uv run python -m backend.app.parsing path/to/screenshot.png
 
-uv run fastapi dev backend/app/main.py     # http://localhost:8000/health
+# Live projections for the upcoming week (after the previous week's games are final)
+for d in weekly_stats schedules injuries snap_counts rosters_weekly; do
+  uv run python -m ml.ingest.$d --start-season 2026 --end-season 2026
+done
+uv run python -m ml.serve.project --season 2026 --week 8
+
+# App: database schema, API, UI (DATABASE_URL unset -> local SQLite file)
+uv run alembic -c backend/alembic.ini upgrade head
+uv run fastapi dev backend/app/main.py     # http://localhost:8000/docs
 cd frontend && npm install && npm run dev  # http://localhost:3000
+# or API + Postgres in Docker: docker compose up --build
 ```
 
 ## Checks

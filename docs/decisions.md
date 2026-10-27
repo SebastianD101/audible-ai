@@ -341,3 +341,58 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
     points are compared across sources on the same rosters, and include knowing who to start.
   - An oracle (actual points) gives an upper bound for scale.
   - CIs come from a week-block bootstrap with shared draws, so the differences are paired.
+
+## 2026-10-27: API, UI, and live projections (Phase 8)
+
+- **Live projections come from an offline weekly job, not the API.**
+  `ml.serve.project --season 2026 --week W` runs Tuesday night after week W-1. It refits
+  LightGBM from scratch on every labeled row before W (2018-2025 plus 2026 weeks 2..W-1),
+  exactly as the backtest refits each week, and writes
+  `ml/data/projections/season=2026/week=WW.parquet` with a manifest. The manifest records the
+  raw-data hashes, params sha, training row count, and git SHA, and the run is logged to
+  MLflow. The API only reads these files. Training stays out of the web process, and the
+  backend image doesn't need LightGBM or MLflow; a test enforces that.
+- **The 2026 holdout is used for refits, never for tuning.** The serving params
+  (`ml/serve/params/season=2026.json`, committed) come from `tune_season(2026)`, which trains
+  on seasons before 2025 and validates on 2025. Each week's projections file is written before
+  that week's games, so a later live evaluation of 2026 (projections vs actual points) stays
+  honest, provided the weekly files are kept. The job refuses to run until every week W-1 game
+  has a final score.
+- **Leakage test for serving.** Corrupting every input at or after week W (stats, snaps,
+  rosters, injuries, scores) leaves the week-W projections byte-identical. The test also
+  asserts that the projections vary, so it can't pass vacuously.
+- **`hold_value` = season-to-date PPR per game** (the `season_avg` baseline) feeds the
+  optimizer's drop guard, the same choice as in the pickup backtest.
+- **Persistence: Postgres via SQLAlchemy 2.1 and Alembic.** Two tables store parse results and
+  recommendation runs (request, response, and projections version). **No image bytes are ever
+  stored**, and a test checks that no column could hold them. JSON columns keep the schema
+  portable, so tests run on SQLite. The schema comes only from migrations, never
+  `create_all`, so dev and deployment can't drift. A test diffs the migrations against the
+  models on SQLite, and CI repeats it against a real Postgres 17 service. With
+  `DATABASE_URL` unset, the API uses a local SQLite file, so it runs without Docker.
+  SQLAlchemy 2.1.4 and Alembic 1.20.0 match the versions MLflow already resolved; psycopg is
+  3.3.6.
+- **API errors map to what the user can do.** Unreadable image → 422; over 5 MB → 413,
+  rejected before the whole upload is read. Missing key or model → 503 with the setting to
+  fix. Rate limit or overload → 503 with `Retry-After`. Declined or unusable output → 502.
+  Unknown player IDs → 422 listing them. No projections yet → 503 with the command that makes
+  them.
+- **The waiver list is a second screenshot through the same parser.** The prompt was
+  generalized from "roster" to "roster or player list", and ownership percentages are
+  skipped. Player search covers the whole season player index (including K, DST, and players
+  on bye), not just projected players, so anything visible in a league can be entered.
+- **Every recommendation carries its evidence.** The response includes the pickup-backtest
+  estimate for the chosen move count (1: +1.98 [1.27, 2.75]; 2: +2.46 [1.54, 3.46]; 3: not
+  backtested, so none is shown), plus protection reasons and caveats. The UI shows the
+  evidence next to the projected gain.
+- **Review gating in the UI.** A flagged row (unclear text, ambiguous or missing match) must
+  be confirmed, corrected, or removed before recommendations can run. Hand-picked players
+  count as confirmed. Duplicates are badged.
+- **Frontend: TanStack Query 5.104.2, shadcn/ui (new-york, neutral), radix-ui 1.8.1.** The
+  shadcn CLI hung non-interactively, so the seven primitives used (button, card, badge, input,
+  label, alert, table) were added by hand in its format, with `components.json` so the CLI can
+  manage them later. API types are hand-written in `frontend/lib/api.ts`, with no codegen
+  dependency. The backend snapshots its OpenAPI schema (`tests/backend/api/openapi.json`), so
+  any contract change shows up in review.
+- **Not yet measured:** extraction accuracy on real screenshots, and live 2026 accuracy. Both
+  need data that doesn't exist yet: labeled screenshots, and completed weeks.
