@@ -10,6 +10,7 @@ dependencies = [
     "nflreadpy==0.1.5",
     "numpy==2.5.3",
     "polars==1.44.2",
+    "pulp==3.3.2",
     "pyarrow==25.0.1",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
@@ -57,7 +58,7 @@ strict = true
 exclude = ['^frontend/', '^\.venv/']
 
 [[tool.mypy.overrides]]
-module = ["nflreadpy", "nflreadpy.*"]
+module = ["nflreadpy", "nflreadpy.*", "pulp", "pulp.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
