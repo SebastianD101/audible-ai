@@ -1,0 +1,53 @@
+# Local stack: Postgres, a one-shot migration, and the API.
+#   docker compose up --build        -> http://localhost:8000/health
+# The frontend runs separately: cd frontend && npm run dev
+# Projections and rosters are produced on the host (see README) and mounted read-only.
+# Credentials here are for local development only; deployment sets its own DATABASE_URL.
+
+x-database-url: &database-url postgresql+psycopg://audible:audible@db:5432/audible
+
+services:
+  db:
+    image: postgres:17.6
+    environment:
+      POSTGRES_USER: audible
+      POSTGRES_PASSWORD: audible
+      POSTGRES_DB: audible
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U audible -d audible"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    build: .
+    command: ["alembic", "-c", "backend/alembic.ini", "upgrade", "head"]
+    environment:
+      DATABASE_URL: *database-url
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: *database-url
+      CORS_ORIGINS: '["http://localhost:3000"]'
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ml/data/projections:/app/ml/data/projections:ro
+      - ./ml/data/raw/rosters_weekly:/app/ml/data/raw/rosters_weekly:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:

@@ -17,6 +17,21 @@ jobs:
   python:
     name: Python (lint, types, tests)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_USER: audible
+          POSTGRES_PASSWORD: audible
+          POSTGRES_DB: audible_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U audible -d audible_test"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      # Runs the `postgres`-marked migration test against a real Postgres.
+      TEST_DATABASE_URL: postgresql+psycopg://audible:audible@localhost:5432/audible_test
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.2
@@ -50,7 +65,7 @@ jobs:
       - run: npm run build
 
   docker:
-    name: Backend image builds
+    name: Backend image builds, compose file is valid
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -61,3 +76,5 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Validate docker-compose.yml
+        run: docker compose config --quiet
