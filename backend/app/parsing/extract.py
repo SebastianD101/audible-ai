@@ -23,23 +23,26 @@ logger = logging.getLogger(__name__)
 MAX_TOKENS = 16_000
 
 SYSTEM_PROMPT = """\
-You transcribe fantasy football roster screenshots into structured data.
+You transcribe fantasy football screenshots into structured data: either a team roster or a \
+list of available players (waiver wire or free agents).
 
 Transcribe only what is visible in the image. Do not add players who are not shown, and do not \
 fill in a team, position, or injury tag from your own knowledge when the screenshot doesn't \
-show it; leave that field null instead. Include every rostered player in screen order, starters \
-and bench and IR. Skip empty slots, opponents, projections, and point totals.
+show it; leave that field null instead. Include every listed player in screen order (for a \
+roster: starters, bench, and IR). Skip empty slots, opponents, projections, point totals, and \
+ownership percentages.
 
 For each player, set legibility to "clear" only if you read every field without doubt. Use \
 "partial" when some text is cut off, truncated with an ellipsis, or blurry, and "guessed" when \
 the name itself is uncertain; say why in the note. For a team defense, put the team name as \
 shown in name and use position DST.
 
-If the image is not a fantasy football roster, return an empty players list and explain in \
-warnings. Also use warnings for whole-image problems such as a roster cut off at the bottom.\
+If the image is not a fantasy football roster or player list, return an empty players list and \
+explain in warnings. Also use warnings for whole-image problems such as a list cut off at the \
+bottom.\
 """
 
-USER_PROMPT = "Transcribe the roster in this screenshot."
+USER_PROMPT = "Transcribe the players in this screenshot."
 
 
 class ConfigurationError(RuntimeError):

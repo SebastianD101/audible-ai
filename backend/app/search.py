@@ -69,3 +69,8 @@ def search_players(
 
     scored.sort(key=lambda t: (-t[0], -projection(t[1]), t[1].name))
     return [to_hit(p, table) for _, p in scored[:limit]]
+
+
+def hits_for(index: PlayerIndex, table: ProjectionTable, ids: set[str]) -> dict[str, PlayerHit]:
+    """Display info and projections for the given player IDs (unknown IDs are skipped)."""
+    return {p.player_id: to_hit(p, table) for p in index.players if p.player_id in ids}
