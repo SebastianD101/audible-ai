@@ -266,3 +266,39 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
   ECR) gets a loader that emits per-(player, week) rankings. The harness can score those like
   any predictor: Spearman by (week, position) needs only ranks, and the paired bootstrap applies
   unchanged.
+
+## 2026-10-27: Screenshot parsing (Phase 6)
+
+- **Anthropic SDK pinned at `anthropic==1.12.1`**, the newest release before the uv
+  `exclude-newer` cutoff. The 2.x line (2026-10-21 onward) is too new under the pinning policy.
+- **Structured outputs, not free-form JSON.** `client.messages.parse(output_format=ExtractedRoster)`
+  constrains the reply to the Pydantic schema, so a successful call always yields a validated
+  object. `parse()` validates inside the call, so a truncated or declined reply surfaces as a
+  pydantic `ValidationError`. It's mapped to `ExtractionError` along with `refusal` and
+  `max_tokens` stop reasons.
+- **The model transcribes; it doesn't look players up.** The prompt says to leave team,
+  position, and injury null when they aren't visible, and to mark each row `clear`, `partial`,
+  or `guessed`. ID matching is done locally against nflverse rosters, so it's deterministic,
+  testable, and free.
+- **Model and effort come from settings** (`ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, default
+  `medium`). Effort is set explicitly because defaults differ by model. The code never names a
+  model. No server-side refusal fallback is configured: the model is user-chosen, and a
+  declined read is reported to the user rather than retried on another model.
+- **Matching uses stdlib `difflib`**, not rapidfuzz, to avoid a dependency for about 1k
+  candidates. First and last names are scored separately and averaged, so a shared surname
+  ("Mike" vs "Kyle Williams") can't pass as a near-match. Abbreviated first names ("J.
+  Jefferson") score 0.95 when the surname is exact. Thresholds: matched at name score >= 0.90
+  with a 0.05 lead, ambiguous at >= 0.80, unmatched below. Candidates >= 0.60 are still shown.
+  A team that agrees with the screenshot only breaks ties. It never lifts a weak name over a
+  threshold, and a mismatch isn't penalized because screenshots lag trades. The thresholds were
+  set by hand on test cases and a real-name smoke check, not fit to labeled screenshots.
+- **`needs_review`** is true unless the row was read `clear`, matched uniquely, and no other
+  row matched the same player. Phase 8's review screen is where those rows get corrected.
+- **2026 weekly rosters are ingested for ID lookup only.** Current-season rosters are needed
+  to match rookies and traded players. They're read by `backend.app.parsing.players` and never
+  by features, training, or tuning, so the 2026 holdout is unaffected.
+- **Images:** type comes from magic bytes (PNG, JPEG, WebP, GIF), never the filename. The size
+  is capped at 5 MB (the API's per-image limit; `MAX_UPLOAD_BYTES` can only lower it). Images
+  are held in memory and never written to disk.
+- **Extraction accuracy is not yet measured.** It needs a labeled set of real screenshots (see
+  `docs/parsing.md`). Until then, no accuracy claim is made.

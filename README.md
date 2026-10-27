@@ -14,7 +14,7 @@ leakage-free walk-forward backtest against expert consensus.
 | 3 | Features | Done: 63 waiver-time features (usage, SOS-adjusted defense vs position, context, availability, vacated opportunity), leakage-tested |
 | 4 | Backtest harness + naive baseline | Done: walk-forward harness, week-block bootstrap CIs, MLflow; baselines in [docs/backtest.md](docs/backtest.md) |
 | 5 | LightGBM model + comparison | Done: nested-tuned LightGBM vs both baselines, kickoff-information ablation; expert consensus deferred (terms of use) |
-| 6 | Screenshot parsing | Not started |
+| 6 | Screenshot parsing | Done: Claude vision + structured outputs to validated roster JSON, matched to nflverse IDs with per-player review flags ([docs/parsing.md](docs/parsing.md)); extraction accuracy not yet measured |
 | 7 | Optimizer | Not started |
 | 8 | API and UI | Not started |
 | 9 | Deployment and write-up | Not started |
@@ -29,6 +29,7 @@ ml/          data ingestion, features, models, backtests (no web code)
   features/  leakage-free features as of waiver time (see docs/features.md)
   data/      gitignored Parquet output, reproducible via `python -m ml.ingest`
 backend/     FastAPI app
+  app/parsing/  screenshot -> validated, ID-matched roster (see docs/parsing.md)
 frontend/    Next.js (App Router, TypeScript, Tailwind)
 tests/       pytest suite mirroring ml/ and backend/
 docs/        decisions log, reports
@@ -50,9 +51,13 @@ uv run python -m ml.ingest --start-season 2018 --end-season 2025
 # Features: one row per (player, target week) -> ml/data/processed/features/
 uv run python -m ml.features.build --start-season 2018 --end-season 2025
 
-# Backtest (walk-forward, 2019-2025; 2026 is the locked holdout) -> ml/data/backtest/, MLflow
-uv run python -m ml.backtest.run --start-season 2019 --end-season 2025
+# Backtest (walk-forward, 2020-2025; 2026 is the locked holdout) -> ml/data/backtest/, MLflow
+uv run python -m ml.backtest.run --start-season 2020 --end-season 2025
 uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db
+
+# Screenshot parsing: current-season rosters for ID lookup, then one real (billed) API call
+uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026
+uv run python -m backend.app.parsing path/to/screenshot.png
 
 uv run fastapi dev backend/app/main.py     # http://localhost:8000/health
 cd frontend && npm install && npm run dev  # http://localhost:3000
