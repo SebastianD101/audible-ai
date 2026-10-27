@@ -1,0 +1,1027 @@
+{
+  "components": {
+    "schemas": {
+      "BacktestEvidence": {
+        "description": "How recommendations like this one did historically (``docs/pickups.md``).",
+        "properties": {
+          "hit_rate": {
+            "title": "Hit Rate",
+            "type": "number"
+          },
+          "realized_gain": {
+            "title": "Realized Gain",
+            "type": "number"
+          },
+          "realized_gain_hi": {
+            "title": "Realized Gain Hi",
+            "type": "number"
+          },
+          "realized_gain_lo": {
+            "title": "Realized Gain Lo",
+            "type": "number"
+          },
+          "roster_weeks": {
+            "title": "Roster Weeks",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "weeks": {
+            "title": "Weeks",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "realized_gain",
+          "realized_gain_lo",
+          "realized_gain_hi",
+          "hit_rate",
+          "roster_weeks",
+          "weeks",
+          "summary"
+        ],
+        "title": "BacktestEvidence",
+        "type": "object"
+      },
+      "Body_parse_screenshot_api_parse_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "PNG, JPEG, WebP, or GIF screenshot",
+            "title": "File",
+            "type": "string"
+          },
+          "kind": {
+            "default": "roster",
+            "enum": [
+              "roster",
+              "free_agents"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_parse_screenshot_api_parse_post",
+        "type": "object"
+      },
+      "Candidate": {
+        "description": "A possible nflverse player for an extracted name.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "string"
+          },
+          "position": {
+            "enum": [
+              "QB",
+              "RB",
+              "WR",
+              "TE",
+              "K",
+              "DST"
+            ],
+            "title": "Position",
+            "type": "string"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          }
+        },
+        "required": [
+          "player_id",
+          "name",
+          "position",
+          "team",
+          "score"
+        ],
+        "title": "Candidate",
+        "type": "object"
+      },
+      "ExtractedPlayer": {
+        "description": "One roster row as read from the screenshot, before any ID matching.",
+        "properties": {
+          "injury_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Injury designation shown (e.g. 'Q', 'O', 'IR'); null if none is shown.",
+            "title": "Injury Tag"
+          },
+          "legibility": {
+            "description": "'clear' if every field was read without doubt, 'partial' if some text was cut off or blurry, 'guessed' if the name itself is uncertain.",
+            "enum": [
+              "clear",
+              "partial",
+              "guessed"
+            ],
+            "title": "Legibility",
+            "type": "string"
+          },
+          "name": {
+            "description": "Player name exactly as shown, or the team name for a defense.",
+            "title": "Name",
+            "type": "string"
+          },
+          "nfl_team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "NFL team abbreviation shown next to the player (e.g. 'KC'); null if not shown.",
+            "title": "Nfl Team"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Short reason for any uncertainty; null if clear.",
+            "title": "Note"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "enum": [
+                  "QB",
+                  "RB",
+                  "WR",
+                  "TE",
+                  "K",
+                  "DST"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fantasy position shown for the player; null if not visible.",
+            "title": "Position"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lineup slot as shown (e.g. 'QB', 'RB', 'FLEX', 'BN', 'IR'); null if not shown.",
+            "title": "Slot"
+          }
+        },
+        "required": [
+          "name",
+          "position",
+          "nfl_team",
+          "slot",
+          "injury_tag",
+          "legibility",
+          "note"
+        ],
+        "title": "ExtractedPlayer",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "description": "Liveness probe response.",
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "LeagueSettings": {
+        "description": "Scoring and lineup configuration for one league.",
+        "properties": {
+          "flex_positions": {
+            "default": [
+              "RB",
+              "TE",
+              "WR"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "Flex Positions",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "scoring": {
+            "const": "ppr",
+            "default": "ppr",
+            "description": "Only PPR is supported: the projection model is PPR-only.",
+            "title": "Scoring",
+            "type": "string"
+          },
+          "slots": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "QB",
+                "RB",
+                "WR",
+                "TE",
+                "FLEX",
+                "SUPERFLEX"
+              ]
+            },
+            "title": "Slots",
+            "type": "object"
+          }
+        },
+        "title": "LeagueSettings",
+        "type": "object"
+      },
+      "LineupOut": {
+        "description": "A starting lineup and its projected points.",
+        "properties": {
+          "points": {
+            "title": "Points",
+            "type": "number"
+          },
+          "starters": {
+            "items": {
+              "$ref": "#/components/schemas/LineupSlot"
+            },
+            "title": "Starters",
+            "type": "array"
+          }
+        },
+        "required": [
+          "starters",
+          "points"
+        ],
+        "title": "LineupOut",
+        "type": "object"
+      },
+      "LineupSlot": {
+        "description": "One starter.",
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerHit"
+          },
+          "slot": {
+            "title": "Slot",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot",
+          "player"
+        ],
+        "title": "LineupSlot",
+        "type": "object"
+      },
+      "ParseResponse": {
+        "description": "A parsed screenshot plus display info for every matched or candidate player.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "roster",
+              "free_agents"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "players": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PlayerHit"
+            },
+            "title": "Players",
+            "type": "object"
+          },
+          "roster": {
+            "$ref": "#/components/schemas/ParsedRoster"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "roster",
+          "players"
+        ],
+        "title": "ParseResponse",
+        "type": "object"
+      },
+      "ParsedPlayer": {
+        "description": "An extracted player with its match and whether the user should check it.",
+        "properties": {
+          "extracted": {
+            "$ref": "#/components/schemas/ExtractedPlayer"
+          },
+          "match": {
+            "$ref": "#/components/schemas/PlayerMatch"
+          },
+          "needs_review": {
+            "title": "Needs Review",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "extracted",
+          "match",
+          "needs_review"
+        ],
+        "title": "ParsedPlayer",
+        "type": "object"
+      },
+      "ParsedRoster": {
+        "description": "Validated, ID-matched roster returned to the client for review.",
+        "properties": {
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "platform": {
+            "enum": [
+              "espn",
+              "yahoo",
+              "sleeper",
+              "other",
+              "unknown"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedPlayer"
+            },
+            "title": "Players",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "platform",
+          "players",
+          "warnings",
+          "model"
+        ],
+        "title": "ParsedRoster",
+        "type": "object"
+      },
+      "PlayerHit": {
+        "description": "A search result, with this week's projection when the player has one.",
+        "properties": {
+          "hold_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Value"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "player_id": {
+            "title": "Player Id",
+            "type": "string"
+          },
+          "position": {
+            "enum": [
+              "QB",
+              "RB",
+              "WR",
+              "TE",
+              "K",
+              "DST"
+            ],
+            "title": "Position",
+            "type": "string"
+          },
+          "projection": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          }
+        },
+        "required": [
+          "player_id",
+          "name",
+          "position",
+          "team",
+          "projection",
+          "hold_value"
+        ],
+        "title": "PlayerHit",
+        "type": "object"
+      },
+      "PlayerMatch": {
+        "description": "Result of matching one extracted player to the player index.",
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "player_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Id"
+          },
+          "score": {
+            "default": 0.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "matched",
+              "ambiguous",
+              "unmatched"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "PlayerMatch",
+        "type": "object"
+      },
+      "ProjectionsMeta": {
+        "description": "Which projections are being served, and where they came from.",
+        "properties": {
+          "generated_at_utc": {
+            "title": "Generated At Utc",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "season": {
+            "title": "Season",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "week": {
+            "title": "Week",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "season",
+          "week",
+          "version",
+          "generated_at_utc",
+          "rows",
+          "model"
+        ],
+        "title": "ProjectionsMeta",
+        "type": "object"
+      },
+      "Protection": {
+        "description": "A roster player the optimizer would not drop, and why.",
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerHit"
+          },
+          "reason": {
+            "enum": [
+              "locked",
+              "no_projection",
+              "season_starter"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "player",
+          "reason"
+        ],
+        "title": "Protection",
+        "type": "object"
+      },
+      "RecommendationRequest": {
+        "description": "A reviewed roster, the free agents available, and league settings.",
+        "properties": {
+          "free_agents": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 400,
+            "title": "Free Agents",
+            "type": "array"
+          },
+          "locked": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40,
+            "title": "Locked",
+            "type": "array"
+          },
+          "max_moves": {
+            "default": 1,
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Max Moves",
+            "type": "integer"
+          },
+          "roster": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Roster",
+            "type": "array"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/LeagueSettings"
+          }
+        },
+        "required": [
+          "roster"
+        ],
+        "title": "RecommendationRequest",
+        "type": "object"
+      },
+      "RecommendationResponse": {
+        "description": "A stored recommendation.",
+        "properties": {
+          "adds": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerHit"
+            },
+            "title": "Adds",
+            "type": "array"
+          },
+          "after": {
+            "$ref": "#/components/schemas/LineupOut"
+          },
+          "alternatives": {
+            "items": {
+              "$ref": "#/components/schemas/SwapOut"
+            },
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "before": {
+            "$ref": "#/components/schemas/LineupOut"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "drops": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerHit"
+            },
+            "title": "Drops",
+            "type": "array"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BacktestEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "projected_gain": {
+            "title": "Projected Gain",
+            "type": "number"
+          },
+          "projections_version": {
+            "title": "Projections Version",
+            "type": "string"
+          },
+          "protected": {
+            "items": {
+              "$ref": "#/components/schemas/Protection"
+            },
+            "title": "Protected",
+            "type": "array"
+          },
+          "season": {
+            "title": "Season",
+            "type": "integer"
+          },
+          "week": {
+            "title": "Week",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "season",
+          "week",
+          "projections_version",
+          "adds",
+          "drops",
+          "projected_gain",
+          "before",
+          "after",
+          "alternatives",
+          "protected",
+          "caveats",
+          "evidence",
+          "id"
+        ],
+        "title": "RecommendationResponse",
+        "type": "object"
+      },
+      "SwapOut": {
+        "description": "An alternative single add/drop.",
+        "properties": {
+          "add": {
+            "$ref": "#/components/schemas/PlayerHit"
+          },
+          "drop": {
+            "$ref": "#/components/schemas/PlayerHit"
+          },
+          "projected_gain": {
+            "title": "Projected Gain",
+            "type": "number"
+          }
+        },
+        "required": [
+          "add",
+          "drop",
+          "projected_gain"
+        ],
+        "title": "SwapOut",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Audible AI",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/parse": {
+      "post": {
+        "description": "Parse one screenshot. Rows flagged ``needs_review`` must be confirmed by the user.",
+        "operationId": "parse_screenshot_api_parse_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_parse_screenshot_api_parse_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Parse Screenshot",
+        "tags": [
+          "parse"
+        ]
+      }
+    },
+    "/api/players/search": {
+      "get": {
+        "description": "Players whose names match ``q``, with this week's projection when they have one.",
+        "operationId": "player_search_api_players_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "position",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "QB",
+                    "RB",
+                    "WR",
+                    "TE",
+                    "K",
+                    "DST"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Position"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 25,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerHit"
+                  },
+                  "title": "Response Player Search Api Players Search Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Player Search",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/projections/meta": {
+      "get": {
+        "description": "Which season, week, and projections version is being served.",
+        "operationId": "projections_meta_api_projections_meta_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectionsMeta"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Projections Meta",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/recommendations": {
+      "post": {
+        "description": "Recommend up to ``max_moves`` add/drop swaps for next week, and store the run.",
+        "operationId": "create_recommendation_api_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Recommendation",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Report that the service is up.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    }
+  }
+}

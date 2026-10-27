@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from backend.app.api import parse, projections
+from backend.app.api import parse, projections, recommendations
 from backend.app.config import get_settings
 from backend.app.projections import NoProjectionsError
 
@@ -18,6 +18,7 @@ app.add_middleware(
 )
 app.include_router(projections.router)
 app.include_router(parse.router)
+app.include_router(recommendations.router)
 
 
 @app.exception_handler(NoProjectionsError)
