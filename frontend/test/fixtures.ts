@@ -1,6 +1,6 @@
 /** Shared API-shaped fixtures for component and unit tests. */
 
-import type { ParseResponse, PlayerHit } from "@/lib/api";
+import type { ParseResponse, PlayerHit, Recommendation } from "@/lib/api";
 
 export const allen: PlayerHit = {
   player_id: "qb1",
@@ -79,5 +79,55 @@ export function parseResponse(): ParseResponse {
       ],
     },
     players: { qb1: allen, wr9: williams },
+  };
+}
+
+export const waiverWideout: PlayerHit = {
+  player_id: "wr5",
+  name: "Waiver Wideout",
+  position: "WR",
+  team: "MIA",
+  projection: 14,
+  hold_value: 9,
+};
+
+export function recommendation(
+  overrides: Partial<Recommendation> = {},
+): Recommendation {
+  return {
+    id: "r1",
+    season: 2026,
+    week: 8,
+    projections_version: "abc123def456",
+    adds: [waiverWideout],
+    drops: [williams],
+    projected_gain: 7.8,
+    before: {
+      starters: [
+        { slot: "QB", player: allen },
+        { slot: "WR", player: williams },
+      ],
+      points: 30.3,
+    },
+    after: {
+      starters: [
+        { slot: "QB", player: allen },
+        { slot: "WR", player: waiverWideout },
+      ],
+      points: 38.1,
+    },
+    alternatives: [{ add: waiverWideout, drop: williams, projected_gain: 7.8 }],
+    protected: [{ player: allen, reason: "season_starter" }],
+    caveats: ["Projections are for week 8 only."],
+    evidence: {
+      realized_gain: 1.98,
+      realized_gain_lo: 1.27,
+      realized_gain_hi: 2.75,
+      hit_rate: 0.61,
+      roster_weeks: 5050,
+      weeks: 101,
+      summary: "In a 2020-2025 backtest, moves gained 1.98 points per week.",
+    },
+    ...overrides,
   };
 }
