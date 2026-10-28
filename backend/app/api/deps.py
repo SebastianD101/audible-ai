@@ -11,6 +11,7 @@ from backend.app.config import Settings, get_settings
 from backend.app.parsing.players import PlayerIndex, load_player_index
 from backend.app.parsing.service import make_client
 from backend.app.projections import ProjectionTable, load_projections
+from backend.app.sleeper.client import SleeperClient
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -44,3 +45,12 @@ def get_client() -> anthropic.Anthropic | None:
 
 
 ClientDep = Annotated[anthropic.Anthropic | None, Depends(get_client)]
+
+
+@lru_cache(maxsize=1)
+def get_sleeper() -> SleeperClient:
+    """One Sleeper client per process, so its response cache is shared across requests."""
+    return SleeperClient(get_settings().sleeper_api_url)
+
+
+SleeperDep = Annotated[SleeperClient, Depends(get_sleeper)]
