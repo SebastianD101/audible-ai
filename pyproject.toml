@@ -64,14 +64,15 @@ strict = true
 exclude = ['^frontend/', '^\.venv/']
 
 [[tool.mypy.overrides]]
-module = ["nflreadpy", "nflreadpy.*", "pulp", "pulp.*"]
+module = ["nflreadpy", "nflreadpy.*", "pulp", "pulp.*", "rapidocr", "rapidocr.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra --strict-markers -m 'not network'"
+addopts = "-ra --strict-markers -m 'not network and not ocr'"
 markers = [
     "network: hits the real nflverse API (deselected by default; run with -m network)",
     "postgres: needs a Postgres at TEST_DATABASE_URL (skipped when unset; CI runs it)",
+    "ocr: runs the real OCR engine and its ~31 MB models (deselected by default; -m ocr)",
 ]
