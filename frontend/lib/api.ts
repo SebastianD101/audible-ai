@@ -21,13 +21,7 @@ export type Legibility = "clear" | "partial" | "guessed";
 export type MatchStatus = "matched" | "ambiguous" | "unmatched";
 export type ParseKind = "roster" | "free_agents";
 export type SlotName =
-  | "QB"
-  | "RB"
-  | "WR"
-  | "TE"
-  | "WRRB_FLEX"
-  | "FLEX"
-  | "SUPERFLEX";
+  "QB" | "RB" | "WR" | "TE" | "WRRB_FLEX" | "FLEX" | "SUPERFLEX";
 
 export interface PlayerHit {
   player_id: string;
