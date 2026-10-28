@@ -6,7 +6,9 @@ from pydantic import SecretStr
 
 from backend.app.config import Settings
 from backend.app.parsing import __main__ as cli
+from backend.app.parsing.extract import ConfigurationError
 from backend.app.parsing.image import InvalidImageError
+from backend.app.parsing.ocr import ALWAYS_WARNING, OCR_MODEL_NAME, OcrLine
 from backend.app.parsing.players import PlayerIndex, build_player_index
 from backend.app.parsing.schemas import ExtractedPlayer, ExtractedRoster
 from backend.app.parsing.service import make_client, parse_roster_screenshot
@@ -111,6 +113,7 @@ def test_api_key_never_appears_in_output_or_logs(
 
 def test_make_client_uses_configured_key() -> None:
     client = make_client(settings())
+    assert client is not None
     assert client.api_key == SECRET
 
 
@@ -119,7 +122,9 @@ def test_cli_reports_missing_model_without_traceback(
 ) -> None:
     image = tmp_path / "roster.png"
     image.write_bytes(PNG)
-    monkeypatch.setattr(cli, "get_settings", lambda: settings(anthropic_model=None))
+    monkeypatch.setattr(
+        cli, "get_settings", lambda: settings(parser="claude", anthropic_model=None)
+    )
     monkeypatch.setattr(
         cli, "load_player_index", lambda season: build_player_index(rosters(), season)
     )
@@ -142,3 +147,57 @@ def test_cli_success_prints_json(
     out = capsys.readouterr()
     assert '"player_id": "00-004"' in out.out
     assert "0 flagged" in out.err
+
+
+def fake_ocr(monkeypatch: pytest.MonkeyPatch, *texts: str) -> None:
+    """Make local OCR "read" one line per text, one row apart."""
+    lines = [OcrLine(t, 80, 60 + 56 * i, 300, 93 + 56 * i, 0.99) for i, t in enumerate(texts)]
+    monkeypatch.setattr("backend.app.parsing.service.read_lines", lambda image: lines)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected"),
+    [
+        ({}, "claude"),
+        ({"anthropic_model": None}, "ocr"),
+        ({"anthropic_api_key": None}, "ocr"),
+        ({"parser": "ocr"}, "ocr"),
+        ({"parser": "claude", "anthropic_model": None}, "claude"),
+    ],
+)
+def test_auto_parser_uses_claude_only_when_configured(
+    overrides: dict[str, object], expected: str
+) -> None:
+    assert settings(**overrides).resolved_parser() == expected
+
+
+def test_ocr_path_needs_no_client_and_shares_review_flags(
+    index: PlayerIndex, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_ocr(monkeypatch, "Josh Allen BUF - QB", "Jusin Jaffarsan")
+    s = settings(parser="ocr")
+    assert make_client(s) is None
+    parsed = parse_roster_screenshot(PNG, None, s, index)
+    assert parsed.model == OCR_MODEL_NAME
+    assert parsed.players[0].match.player_id == "00-004"
+    assert [p.needs_review for p in parsed.players] == [False, True]
+    assert parsed.warnings[0] == ALWAYS_WARNING
+
+
+def test_claude_parser_without_client_is_a_configuration_error(index: PlayerIndex) -> None:
+    with pytest.raises(ConfigurationError):
+        parse_roster_screenshot(PNG, None, settings(parser="claude"), index)
+
+
+def test_cli_parser_flag_overrides_settings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    image = tmp_path / "roster.png"
+    image.write_bytes(PNG)
+    fake_ocr(monkeypatch, "Josh Allen")
+    monkeypatch.setattr(cli, "get_settings", settings)
+    monkeypatch.setattr(
+        cli, "load_player_index", lambda season: build_player_index(rosters(), season)
+    )
+    assert cli.main([str(image), "--parser", "ocr"]) == 0
+    assert OCR_MODEL_NAME in capsys.readouterr().out

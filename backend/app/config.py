@@ -13,6 +13,9 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Screenshot reader: "claude" (vision model, billed), "ocr" (local and free), or "auto"
+    # (Claude when a key and model are configured, else OCR).
+    parser: Literal["auto", "claude", "ocr"] = "auto"
     anthropic_api_key: SecretStr | None = None
     anthropic_model: str | None = None
     # Effort for screenshot extraction; set explicitly because model defaults differ.
@@ -23,6 +26,12 @@ class Settings(BaseSettings):
     projections_dir: Path = Path("ml/data/projections")
     rosters_dir: Path = Path("ml/data/raw/rosters_weekly")
     cors_origins: list[str] = ["http://localhost:3000"]
+
+    def resolved_parser(self) -> Literal["claude", "ocr"]:
+        """The screenshot reader to use, with ``auto`` resolved."""
+        if self.parser != "auto":
+            return self.parser
+        return "claude" if self.anthropic_api_key and self.anthropic_model else "ocr"
 
 
 @lru_cache

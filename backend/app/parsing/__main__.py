@@ -3,8 +3,9 @@
 Usage:
     uv run python -m backend.app.parsing path/to/screenshot.png [--season 2026]
 
-This makes a real, billed API call using ``ANTHROPIC_API_KEY`` and ``ANTHROPIC_MODEL`` from
-the environment or ``.env``. The image is read into memory only and is not stored.
+With ``PARSER=claude`` (or ``auto`` with ``ANTHROPIC_API_KEY`` and ``ANTHROPIC_MODEL`` set) this
+makes a real, billed API call; ``--parser ocr`` reads the image locally for free. The image is
+read into memory only and is not stored.
 """
 
 import argparse
@@ -26,10 +27,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
     parser.add_argument("image", type=Path, help="PNG, JPEG, WebP, or GIF screenshot")
     parser.add_argument("--season", type=int, default=DEFAULT_SEASON, help="roster season")
+    parser.add_argument(
+        "--parser", choices=["auto", "claude", "ocr"], help="override the PARSER setting"
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     settings = get_settings()
+    if args.parser:
+        settings = settings.model_copy(update={"parser": args.parser})
     try:
         index = load_player_index(args.season)
         roster = parse_roster_screenshot(

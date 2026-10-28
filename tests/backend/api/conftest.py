@@ -17,6 +17,7 @@ def settings(tmp_path: Path) -> Settings:
     upgrade(url)
     return Settings(
         _env_file=None,  # type: ignore[call-arg]
+        parser="claude",
         anthropic_api_key=None,
         anthropic_model="test-model",
         database_url=url,

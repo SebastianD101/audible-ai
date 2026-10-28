@@ -11,6 +11,7 @@ from backend.app.api.deps import get_client
 from backend.app.config import Settings
 from backend.app.db.models import ParseRecord
 from backend.app.main import app
+from backend.app.parsing.ocr import OCR_MODEL_NAME, OcrLine
 from backend.app.parsing.schemas import ExtractedRoster
 from tests.backend.parsing.frames import extracted
 from tests.backend.parsing.test_extract import api_error, fake_client, response
@@ -122,3 +123,18 @@ def test_non_retryable_failure_is_502(client: TestClient, use_client: Install) -
     use_client(response(None, stop_reason="refusal"))
     r = post(client)
     assert r.status_code == 502
+
+
+def test_ocr_parser_runs_without_an_api_client(
+    client: TestClient, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings.parser = "ocr"
+    app.dependency_overrides[get_client] = lambda: None
+    lines = [OcrLine("Josh Allen", 80, 60, 300, 93, 0.99)]
+    monkeypatch.setattr("backend.app.parsing.service.read_lines", lambda image: lines)
+    r = post(client)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["roster"]["model"] == OCR_MODEL_NAME
+    assert [p["extracted"]["name"] for p in body["roster"]["players"]] == ["Josh Allen"]
+    assert records(settings)[0].model == OCR_MODEL_NAME

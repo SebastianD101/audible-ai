@@ -38,9 +38,9 @@ PlayerIndexDep = Annotated[PlayerIndex, Depends(get_player_index)]
 
 
 @lru_cache(maxsize=1)
-def get_client() -> anthropic.Anthropic:
-    """One API client per process (it pools connections)."""
+def get_client() -> anthropic.Anthropic | None:
+    """One API client per process (it pools connections); None when parsing with OCR."""
     return make_client(get_settings())
 
 
-ClientDep = Annotated[anthropic.Anthropic, Depends(get_client)]
+ClientDep = Annotated[anthropic.Anthropic | None, Depends(get_client)]

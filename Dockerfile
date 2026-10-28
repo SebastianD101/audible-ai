@@ -7,6 +7,8 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-default-groups --no-install-project
+# Fetch the local-OCR models (~31 MB) at build time, not on the first upload.
+RUN .venv/bin/python -c "from rapidocr import RapidOCR; RapidOCR()"
 COPY backend ./backend
 COPY ml ./ml
 
