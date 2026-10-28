@@ -7,6 +7,8 @@ import {
   allen,
   parseResponse,
   recommendation,
+  sleeperImport,
+  sleeperLeagues,
   waiverWideout,
 } from "@/test/fixtures";
 import { jsonResponse, renderWithClient, stubApi } from "@/test/render";
@@ -84,6 +86,27 @@ describe("WaiverFlow", () => {
       locked: [allen.player_id],
       max_moves: 1,
     });
+  });
+
+  it("fills roster, free agents, and settings from a Sleeper import", async () => {
+    stubApi({
+      "/api/projections/meta": () => jsonResponse(200, META),
+      "/api/sleeper/leagues": () => jsonResponse(200, sleeperLeagues),
+      "/api/sleeper/import": () => jsonResponse(200, sleeperImport()),
+    });
+    renderWithClient(<WaiverFlow />);
+    await userEvent.type(screen.getByLabelText("Sleeper username"), "someone");
+    await userEvent.click(screen.getByRole("button", { name: "Find leagues" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Import league" }),
+    );
+
+    expect(await screen.findByText(/Imported 1 player /)).toBeVisible();
+    expect(screen.getByLabelText("W/R flex (RB/WR) starters")).toHaveValue(1);
+    expect(screen.getByLabelText("WR starters")).toHaveValue(3);
+    expect(
+      screen.getByRole("button", { name: "Get recommendation" }),
+    ).toBeEnabled();
   });
 
   it("shows when projections are unavailable", async () => {

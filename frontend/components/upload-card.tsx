@@ -91,7 +91,7 @@ export function UploadCard({
           )}
           <span>
             {mutation.isPending
-              ? "Reading screenshot… this can take 20-30 seconds."
+              ? "Reading screenshot… this can take up to 30 seconds."
               : "Drop a screenshot here, or click to choose one (PNG, JPEG, WebP, GIF; up to 5 MB)."}
           </span>
           <input
@@ -137,7 +137,7 @@ export function UploadCard({
         )}
 
         <p className="text-xs text-muted-foreground">
-          The screenshot is sent to the vision model to read names and is not
+          The screenshot is read on the server to find player names and is not
           stored.
         </p>
       </CardContent>

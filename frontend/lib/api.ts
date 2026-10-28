@@ -149,6 +149,30 @@ export interface Recommendation {
   evidence: BacktestEvidence | null;
 }
 
+export interface SleeperLeague {
+  league_id: string;
+  name: string;
+  status: string;
+  total_rosters: number;
+  scoring: string;
+}
+
+export interface SleeperLeaguesResponse {
+  user_id: string;
+  username: string;
+  display_name: string;
+  season: number;
+  leagues: SleeperLeague[];
+}
+
+export interface SleeperImportResponse {
+  league_name: string;
+  roster: ParseResponse;
+  free_agents: ParseResponse;
+  settings: LeagueSettings;
+  warnings: string[];
+}
+
 export const DEFAULT_SETTINGS: LeagueSettings = {
   scoring: "ppr",
   slots: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1 },
@@ -228,6 +252,24 @@ export function parseScreenshot(
   form.append("file", file);
   form.append("kind", kind);
   return request("/api/parse", { method: "POST", body: form });
+}
+
+export function getSleeperLeagues(
+  username: string,
+): Promise<SleeperLeaguesResponse> {
+  const params = new URLSearchParams({ username });
+  return request(`/api/sleeper/leagues?${params}`);
+}
+
+export function importSleeperLeague(
+  leagueId: string,
+  userId: string,
+): Promise<SleeperImportResponse> {
+  return request("/api/sleeper/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ league_id: leagueId, user_id: userId }),
+  });
 }
 
 export function createRecommendation(
