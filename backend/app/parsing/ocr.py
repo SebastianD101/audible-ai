@@ -61,6 +61,8 @@ SLOT_LABELS = {
     "QB", "RB", "WR", "TE", "FLEX", "W/R/T", "W/R", "WR/TE", "R/W/T", "SUPERFLEX", "SFLX",
     "OP", "BN", "BE", "BENCH", "IR", "K", "DEF", "D/ST", "DST",
 }  # fmt: skip
+# Sleeper's bye week after team/position: "C Stroud QB - HOU (8)".
+BYE_WEEK = re.compile(r"\s*\(\d{1,2}\)\s*$")
 TRAILING_TAG = re.compile(r"\s+(?P<tag>Q|D|O|OUT|IR|PUP|SUS|DTD)$")
 DEFENSE_WORDS = re.compile(r"\b(?:D/ST|DST|DEF|Defense)\b", re.IGNORECASE)
 # Letters (accented too), periods, straight or curly apostrophes, slashes, hyphens, spaces.
@@ -196,11 +198,12 @@ def best_score(name: str, position: Position | None, index: PlayerIndex) -> floa
 
 def player_row(line: OcrLine, index: PlayerIndex) -> _Row | None:
     """A ``_Row`` if this line is (probably) a player name, else None."""
-    if not NAME_SHAPED.match(line.text) or line.text.upper() in SLOT_LABELS | INJURY_TAGS:
+    text = BYE_WEEK.sub("", line.text)
+    if not NAME_SHAPED.match(text) or text.upper() in SLOT_LABELS | INJURY_TAGS:
         return None
-    if team_and_position(line.text) is not None:  # a "BAL - DEF" subline, not a name
+    if team_and_position(text) is not None:  # a "BAL - DEF" subline, not a name
         return None
-    name, team, position, tag = split_name(line.text)
+    name, team, position, tag = split_name(text)
     if is_defense(name):
         position = "DST"
     if len(normalize_name(name)) < 3:

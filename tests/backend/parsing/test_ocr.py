@@ -158,3 +158,10 @@ def test_engine_failure_is_an_extraction_error(monkeypatch: pytest.MonkeyPatch) 
     with pytest.raises(ExtractionError) as info:
         read_lines(validate_image(b"\x89PNG\r\n\x1a\n" + b"\x00" * 32))
     assert not info.value.retryable
+
+
+def test_sleeper_line_with_initial_and_bye_week(index: PlayerIndex) -> None:
+    lines = [line("J Allen QB - BUF (7)", 0), line("BAL DEF- BAL (7)", 1)]
+    allen, ravens = lines_to_roster(lines, index).players
+    assert (allen.name, allen.nfl_team, allen.position) == ("J Allen", "BUF", "QB")
+    assert (ravens.name, ravens.nfl_team, ravens.position) == ("BAL", "BAL", "DST")
