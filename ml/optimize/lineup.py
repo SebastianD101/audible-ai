@@ -1,10 +1,11 @@
 """Best starting lineup for a set of players under projected points.
 
 Greedy is exact here. Slot types are filled in ``SLOT_ORDER``, and each type's eligible
-positions contain every earlier type's (QB ⊂ SUPERFLEX, RB ⊂ FLEX ⊂ SUPERFLEX, ...). Filling a
-dedicated slot with anyone but the best remaining player of that position can't help: swapping
-in the better one frees a worse player for the later, broader slots, never a better one. The
-same argument applies to FLEX before SUPERFLEX. Tests check this against brute force.
+positions contain every earlier type's (QB ⊂ SUPERFLEX, RB ⊂ WRRB_FLEX ⊂ FLEX ⊂ SUPERFLEX,
+...). Filling a dedicated slot with anyone but the best remaining player of that position
+can't help: swapping in the better one frees a worse player for the later, broader slots, never
+a better one. The same argument applies to each flex type before the next, broader one. Tests
+check this against brute force.
 
 A slot is left empty rather than filled with a non-positive projection, matching a manager who
 would rather bench a zero than start it. Players without a projection (byes, K/DST, unmatched

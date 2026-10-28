@@ -12,11 +12,13 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from ml.features.load import FANTASY_POSITIONS
 
-SlotName = Literal["QB", "RB", "WR", "TE", "FLEX", "SUPERFLEX"]
+SlotName = Literal["QB", "RB", "WR", "TE", "WRRB_FLEX", "FLEX", "SUPERFLEX"]
 
-# Fill order for the greedy lineup: dedicated slots, then FLEX, then SUPERFLEX. Each later slot
-# type's eligible positions contain the earlier ones', which is what makes greedy optimal.
-SLOT_ORDER: tuple[SlotName, ...] = ("QB", "RB", "WR", "TE", "FLEX", "SUPERFLEX")
+# Fill order for the greedy lineup: dedicated slots, then the RB/WR flex, FLEX, and SUPERFLEX.
+# Each later slot type's eligible positions contain the earlier ones', which is what makes
+# greedy optimal.
+SLOT_ORDER: tuple[SlotName, ...] = ("QB", "RB", "WR", "TE", "WRRB_FLEX", "FLEX", "SUPERFLEX")
+WRRB_POSITIONS = frozenset({"RB", "WR"})
 
 
 def default_slots() -> dict[SlotName, int]:
@@ -67,10 +69,15 @@ class LeagueSettings(BaseModel):
         """FLEX may only draw on projected, non-QB positions."""
         if not self.flex_positions or not self.flex_positions <= set(FANTASY_POSITIONS) - {"QB"}:
             raise ValueError("flex_positions must be a non-empty subset of RB/WR/TE")
+        if self.slots.get("WRRB_FLEX", 0) > 0 and not self.flex_positions >= WRRB_POSITIONS:
+            # Otherwise WRRB_FLEX and FLEX aren't nested and greedy is no longer exact.
+            raise ValueError("a WRRB_FLEX slot needs flex_positions to include RB and WR")
         return self
 
     def eligible(self, slot: SlotName) -> frozenset[str]:
         """Positions that may fill ``slot``."""
+        if slot == "WRRB_FLEX":
+            return WRRB_POSITIONS
         if slot == "FLEX":
             return self.flex_positions
         if slot == "SUPERFLEX":

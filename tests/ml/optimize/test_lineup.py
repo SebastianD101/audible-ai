@@ -105,3 +105,24 @@ def test_settings_reject_unsupported_configs(kwargs: dict[str, object]) -> None:
 def test_k_slot_error_explains_why() -> None:
     with pytest.raises(ValidationError, match="not projected"):
         LeagueSettings.model_validate({"slots": {"QB": 1, "K": 1}})
+
+
+@pytest.mark.parametrize("seed", range(15))
+def test_greedy_matches_brute_force_wrrb_flex(seed: int) -> None:
+    settings = LeagueSettings(slots={"RB": 1, "WR": 1, "WRRB_FLEX": 1, "FLEX": 1})
+    players, proj = random_case(seed + 200, n=7)
+    assert best_lineup(players, proj, settings).points == pytest.approx(
+        brute_force(players, proj, settings)
+    )
+
+
+def test_wrrb_flex_never_starts_a_te() -> None:
+    players = [Player("rb1", "RB"), Player("te1", "TE"), Player("te2", "TE")]
+    settings = LeagueSettings(slots={"TE": 1, "WRRB_FLEX": 1})
+    lineup = best_lineup(players, {"rb1": 5.0, "te1": 20.0, "te2": 18.0}, settings)
+    assert dict(lineup.starters) == {"TE": "te1", "WRRB_FLEX": "rb1"}
+
+
+def test_wrrb_flex_needs_nested_flex_positions() -> None:
+    with pytest.raises(ValidationError, match="WRRB_FLEX"):
+        LeagueSettings(slots={"WRRB_FLEX": 1, "FLEX": 1}, flex_positions=frozenset({"WR", "TE"}))
