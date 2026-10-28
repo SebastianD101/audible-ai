@@ -303,6 +303,35 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
 - **Extraction accuracy is not yet measured.** It needs a labeled set of real screenshots (see
   `docs/parsing.md`). Until then, no accuracy claim is made.
 
+## 2026-10-28: Sleeper league import
+
+- **Why:** for a Sleeper league, a screenshot is the lossy path. Sleeper's public API is
+  read-only, needs no key, and gives exact player IDs, every rostered player in the league (so
+  the real free-agent pool, not just what fits on screen), and the league's lineup and scoring
+  settings. ESPN private leagues need cookies and Yahoo needs OAuth, so screenshots (OCR or
+  Claude) stay for them and as a fallback.
+- **Terms:** free for non-commercial use, with a guideline of under 1000 calls a minute. This
+  is a non-commercial portfolio project. A user import costs about 4 calls, and responses are
+  cached for 60 s. Only the derived rows are stored, the same as for a parsed screenshot.
+- **IDs come from the nflverse crosswalk** (`rosters_weekly.sleeper_id`). Live check: all but 1
+  of about 370 rostered players in two real leagues mapped. Defenses map from Sleeper's team
+  codes. An unmapped player becomes a flagged row instead of a guess. Sleeper's 5 MB players
+  dump isn't fetched: an unmapped player has no projection anyway.
+- **Free agents = the league's unrostered, projected QB/RB/WR/TE, top 10 per position.** The
+  cut is lossless for up to 3 moves: a pickup's value depends only on its projection and
+  position, so the best adds at a position are always its top-projected free agents. It keeps
+  the review table short. Sleeper's public API doesn't say who is on waivers, so a listed
+  player may need a claim rather than a free pickup.
+- **`WRRB_FLEX` added to the optimizer** because a real league used it. It's filled between
+  the dedicated slots and FLEX. {RB, WR} ⊂ {RB, WR, TE} ⊂ all keeps slot eligibility nested,
+  which is what makes the greedy lineup exact. A brute-force test checks it, and a validator
+  rejects a FLEX that doesn't contain RB and WR alongside it. `REC_FLEX` (WR/TE) becomes the
+  FLEX positions when it is the only flex. Next to another flex it isn't nested, so it's
+  approximated as FLEX with a warning.
+- **Scoring isn't converted, it's flagged.** The model projects full-PPR points. A league with
+  other reception scoring, a TE premium, or 6-point passing TDs gets a warning that says which
+  positions are over- or undervalued, rather than a silent rescale the model wasn't trained on.
+
 ## 2026-10-28: Local OCR as a free screenshot reader
 
 - **Why:** Claude vision is billed per upload, so a public demo either needs a key or can't

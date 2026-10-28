@@ -14,7 +14,7 @@ leakage-free walk-forward backtest against expert consensus.
 | 3 | Features | Done: 63 waiver-time features (usage, SOS-adjusted defense vs position, context, availability, vacated opportunity), leakage-tested |
 | 4 | Backtest harness + naive baseline | Done: walk-forward harness, week-block bootstrap CIs, MLflow; baselines in [docs/backtest.md](docs/backtest.md) |
 | 5 | LightGBM model + comparison | Done: nested-tuned LightGBM vs both baselines, kickoff-information ablation; expert consensus deferred (terms of use) |
-| 6 | Screenshot parsing | Done: Claude vision + structured outputs to validated roster JSON, matched to nflverse IDs with per-player review flags; free local OCR (RapidOCR) when no API key is set ([docs/parsing.md](docs/parsing.md)); extraction accuracy not yet measured |
+| 6 | Screenshot parsing | Done: Claude vision + structured outputs to validated roster JSON, matched to nflverse IDs with per-player review flags; free local OCR (RapidOCR) when no API key is set ([docs/parsing.md](docs/parsing.md)); extraction accuracy not yet measured. Sleeper leagues import directly from Sleeper's API with exact IDs, the league's free agents, and lineup settings |
 | 7 | Optimizer | Done: MILP add/drop recommender (PuLP/CBC) with a season-value drop guard, plus a historical pickup backtest ([docs/pickups.md](docs/pickups.md)); PPR only |
 | 8 | API and UI | Done: weekly live projections job (2026 refits, tuning only on ≤2025), FastAPI endpoints with Postgres/Alembic persistence (never images), Next.js upload → review → recommendation flow showing backtest evidence ([docs/api.md](docs/api.md)) |
 | 9 | Deployment and write-up | Not started |
