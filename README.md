@@ -14,7 +14,7 @@ leakage-free walk-forward backtest against expert consensus.
 | 3 | Features | Done: 63 waiver-time features (usage, SOS-adjusted defense vs position, context, availability, vacated opportunity), leakage-tested |
 | 4 | Backtest harness + naive baseline | Done: walk-forward harness, week-block bootstrap CIs, MLflow; baselines in [docs/backtest.md](docs/backtest.md) |
 | 5 | LightGBM model + comparison | Done: nested-tuned LightGBM vs both baselines, kickoff-information ablation; expert consensus deferred (terms of use) |
-| 6 | Screenshot parsing | Done: Claude vision + structured outputs to validated roster JSON, matched to nflverse IDs with per-player review flags ([docs/parsing.md](docs/parsing.md)); extraction accuracy not yet measured |
+| 6 | Screenshot parsing | Done: Claude vision + structured outputs to validated roster JSON, matched to nflverse IDs with per-player review flags; free local OCR (RapidOCR) when no API key is set ([docs/parsing.md](docs/parsing.md)); extraction accuracy not yet measured |
 | 7 | Optimizer | Done: MILP add/drop recommender (PuLP/CBC) with a season-value drop guard, plus a historical pickup backtest ([docs/pickups.md](docs/pickups.md)); PPR only |
 | 8 | API and UI | Done: weekly live projections job (2026 refits, tuning only on ≤2025), FastAPI endpoints with Postgres/Alembic persistence (never images), Next.js upload → review → recommendation flow showing backtest evidence ([docs/api.md](docs/api.md)) |
 | 9 | Deployment and write-up | Not started |
@@ -59,9 +59,11 @@ uv run python -m ml.features.build --start-season 2018 --end-season 2025
 uv run python -m ml.backtest.run --start-season 2020 --end-season 2025
 uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db
 
-# Screenshot parsing: current-season rosters for ID lookup, then one real (billed) API call
+# Screenshot parsing: current-season rosters for ID lookup, then one real (billed) API call,
+# or --parser ocr to read it locally for free (PARSER=auto uses OCR when no API key is set)
 uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026
 uv run python -m backend.app.parsing path/to/screenshot.png
+uv run python -m backend.app.parsing path/to/screenshot.png --parser ocr
 
 # Live projections for the upcoming week (after the previous week's games are final)
 for d in weekly_stats schedules injuries snap_counts rosters_weekly; do

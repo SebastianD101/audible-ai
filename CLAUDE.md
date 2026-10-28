@@ -12,7 +12,7 @@ reproducibility, honest evaluation, and clear documentation matter as much as mo
 
 - **ML / data:** Python 3.12, uv, Polars, scikit-learn, LightGBM, Optuna, MLflow (local), nflreadpy (nflverse)
 - **Backend:** FastAPI, Pydantic v2, SQLAlchemy, Postgres, Alembic
-- **Screenshot parsing:** Anthropic API (vision). Model name comes from the `ANTHROPIC_MODEL` env var, never hardcoded.
+- **Screenshot parsing:** Anthropic API (vision). Model name comes from the `ANTHROPIC_MODEL` env var, never hardcoded. Free local fallback: RapidOCR on ONNX Runtime (`PARSER=ocr`).
 - **Optimizer:** PuLP or OR-Tools (linear programming)
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind, shadcn/ui, TanStack Query
 - **Ops:** Docker, docker-compose, GitHub Actions (CI and weekly data refresh), Fly.io or Railway for deploy
@@ -92,7 +92,8 @@ Finish and commit each phase before starting the next. Do not start a later phas
 - MLflow UI: `uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db`
 - Pickup backtest (reuses the newest backtest run's predictions): `uv run python -m ml.backtest.pickups --start-season 2020 --end-season 2025` (`--rosters N`, `--max-moves 1,2`, `--predictions <path>`; about 20 min)
 - Current-season rosters (ID lookup for parsing only, never training): `uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026`
-- Parse a screenshot (real, billed API call): `uv run python -m backend.app.parsing <image> [--season 2026]`
+- Parse a screenshot (real, billed API call): `uv run python -m backend.app.parsing <image> [--season 2026]` (`--parser ocr` reads it locally for free; `PARSER=auto|claude|ocr` sets the default)
+- Real OCR engine tests (~31 MB models on first run): `uv run pytest -m ocr`
 - Live data refresh: the same ingest commands with `--start-season 2026 --end-season 2026` (weekly_stats, schedules, injuries, snap_counts, rosters_weekly)
 - Serving params (tunes on <=2025 only; commit the JSON): `uv run python -m ml.serve.params --season 2026`
 - Weekly projections (refuses until week W-1 is final): `uv run python -m ml.serve.project --season 2026 --week W`

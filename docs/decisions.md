@@ -303,6 +303,27 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
 - **Extraction accuracy is not yet measured.** It needs a labeled set of real screenshots (see
   `docs/parsing.md`). Until then, no accuracy claim is made.
 
+## 2026-10-28: Local OCR as a free screenshot reader
+
+- **Why:** Claude vision is billed per upload, so a public demo either needs a key or can't
+  parse at all. Local OCR makes parsing free and keyless, at some cost in robustness.
+- **RapidOCR 3.10.0 on ONNX Runtime**, not Tesseract (needs a system binary and reads small UI
+  text on dark backgrounds poorly) and not EasyOCR or PaddleOCR proper (pull in PyTorch or
+  Paddle, hundreds of MB). RapidOCR is pip-only, CPU-only, and Apache-2.0 with Apache-2.0
+  models. 3.10.0 over 3.9.2 because it depends on headless OpenCV, which needs no GUI libraries
+  in the slim image.
+- **Layout from rules, not a model.** Player lines are found by fuzzy-matching against the
+  player index with the matcher's own scorer, and context lines attach by geometry. The rules
+  are short, testable without the engine, and easy to explain. The tradeoff: unusual layouts
+  break them, and a player missing from the index is dropped instead of flagged.
+- **Same output schema and review flags as Claude.** OCR fills `ExtractedRoster`, so matching,
+  `needs_review`, the API, and the UI are unchanged. OCR confidence drives legibility, and every
+  OCR parse warns the user to check each row.
+- **`PARSER=auto` by default:** Claude when a key and model are configured, else OCR. Existing
+  setups keep their behavior. `--parser` on the CLI overrides it.
+- **Not yet measured on real screenshots.** The labeled-set plan in `docs/parsing.md` now
+  compares both readers.
+
 ## 2026-10-27: Optimizer (Phase 7)
 
 - **PuLP pinned at 3.3.2.** 4.0.0 (2026-09-25) is a brand-new major rewrite, so it was skipped
