@@ -98,3 +98,53 @@ def test_write_projections_records_version_and_provenance(tmp_path: Path) -> Non
 def test_cli_rejects_past_seasons_and_week_one(argv: list[str]) -> None:
     with pytest.raises(SystemExit):
         project.parse_args(argv)
+
+
+def schedule(final_through: int, started: int = 0, weeks: int = 6) -> pl.DataFrame:
+    """Two teams' games for 2023: weeks up to ``final_through`` are scored, plus ``started``
+    teams' games in the next week."""
+    rows = [
+        {"season": 2023, "week": w, "team": t, "points_for": 20 if w <= final_through else None}
+        for w in range(1, weeks + 1)
+        for t in ("AAA", "BBB")
+    ]
+    for row in rows:
+        if row["week"] == final_through + 1 and row["team"] in ("AAA", "BBB")[:started]:
+            row["points_for"] = 20
+    return pl.DataFrame(rows, schema_overrides={"points_for": pl.Int64})
+
+
+@pytest.mark.parametrize(
+    ("final_through", "expected"), [(0, Week(2023, 1)), (4, Week(2023, 5)), (6, None)]
+)
+def test_next_target_week_is_the_first_unplayed(final_through: int, expected: Week | None) -> None:
+    assert project.next_target_week(schedule(final_through), 2023) == expected
+
+
+def test_auto_projects_the_next_week(tmp_path: Path) -> None:
+    assert project.auto_target(schedule(4), 2023, tmp_path) == (Week(2023, 5), "")
+
+
+@pytest.mark.parametrize(
+    ("games", "reason"),
+    [
+        (schedule(6), "season is over"),
+        (schedule(0), "week 1"),
+        (schedule(4, started=1), "already kicked off"),
+    ],
+)
+def test_auto_skips_with_a_reason(tmp_path: Path, games: pl.DataFrame, reason: str) -> None:
+    target, why = project.auto_target(games, 2023, tmp_path)
+    assert target is None
+    assert reason in why
+
+
+def test_auto_never_overwrites_a_published_week(tmp_path: Path) -> None:
+    project.write_projections(pl.DataFrame({"a": [1]}), tmp_path, Week(2023, 5), {})
+    assert project.auto_target(schedule(4), 2023, tmp_path) == (None, "2023-W05: already projected")
+
+
+def test_cli_accepts_auto() -> None:
+    assert project.parse_args(["--week", "auto"]).week == "auto"
+    with pytest.raises(SystemExit):
+        project.parse_args(["--week", "soon"])

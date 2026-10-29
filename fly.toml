@@ -1,0 +1,39 @@
+# Fly.io config for the API (see docs/deploy.md). Secrets are never in this file:
+#   fly secrets set DATABASE_URL=... CORS_ORIGINS='["https://<app>.vercel.app"]'
+# The image is the Dockerfile's default `serve` target, built by .github/workflows/deploy.yml
+# with this week's projections and rosters inside.
+
+app = "audible-ai"  # change if taken: `fly launch --no-deploy` writes the name you pick
+primary_region = "iad"  # near Neon's us-east-1 and Vercel's default region
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # Migrations run once per release, before new machines take traffic.
+  release_command = "alembic -c backend/alembic.ini upgrade head"
+
+[env]
+  # The public demo reads screenshots with free local OCR so it never bills an API key.
+  # To use Claude: set PARSER = "auto" here, then fly secrets set ANTHROPIC_API_KEY=...
+  # ANTHROPIC_MODEL=...
+  PARSER = "ocr"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  # Scale to zero when idle; the first request after that waits a few seconds for a start.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"  # headroom for the ONNX OCR models and Polars frames

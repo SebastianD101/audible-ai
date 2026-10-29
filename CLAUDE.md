@@ -97,7 +97,9 @@ Finish and commit each phase before starting the next. Do not start a later phas
 - Live Sleeper API test: `SLEEPER_TEST_USERNAME=<username> uv run pytest -m network tests/backend/sleeper`
 - Live data refresh: the same ingest commands with `--start-season 2026 --end-season 2026` (weekly_stats, schedules, injuries, snap_counts, rosters_weekly)
 - Serving params (tunes on <=2025 only; commit the JSON): `uv run python -m ml.serve.params --season 2026`
-- Weekly projections (refuses until week W-1 is final): `uv run python -m ml.serve.project --season 2026 --week W`
+- Weekly projections (refuses until week W-1 is final): `uv run python -m ml.serve.project --season 2026 --week W` (`--week auto` picks the next unplayed week and never overwrites or projects after kickoff; projections under `ml/data/projections/` are committed)
+- Live 2026 evaluation (read-only, writes `docs/live-2026.md`): `uv run python -m ml.serve.evaluate --season 2026`
+- Deployable image (data baked in; needs rosters_weekly 2026 ingested): `docker build --target serve .`; compose and CI use `--target runtime`. Deploy and weekly refresh: `.github/workflows/deploy.yml`, `refresh.yml` (setup in `docs/deploy.md`)
 - DB migrations: `uv run alembic -c backend/alembic.ini upgrade head` (`DATABASE_URL` unset -> local SQLite `audible.db`)
 - Full stack in Docker (Postgres + migrate + API): `docker compose up --build`
 - Postgres migration test locally: set `TEST_DATABASE_URL` and run `uv run pytest -m postgres`

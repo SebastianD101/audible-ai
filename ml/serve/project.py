@@ -2,6 +2,7 @@
 
 Usage:
     uv run python -m ml.serve.project --season 2026 --week 8
+    uv run python -m ml.serve.project --season 2026 --week auto   # the scheduled refresh
 
 Run on Tuesday night after week W-1's games, the same waiver-time cutoff the features use.
 The model is refit from scratch, as the backtest does each week:
@@ -29,7 +30,7 @@ import logging
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import mlflow
 import polars as pl
@@ -71,6 +72,42 @@ def check_ready(games: pl.DataFrame, target: Week) -> None:
         )
 
 
+def next_target_week(games: pl.DataFrame, season: int) -> Week | None:
+    """The first week of ``season`` with a game still unplayed, or None once the season is over.
+
+    The scheduled refresh projects this week. A week whose games have started is never
+    returned as projectable (see ``auto_target``), so a late run can't see its results.
+    """
+    open_weeks = games.filter((pl.col("season") == season) & pl.col("points_for").is_null())
+    if open_weeks.is_empty():
+        return None
+    return Week(season, int(open_weeks["week"].min()))  # type: ignore[arg-type]
+
+
+def auto_target(games: pl.DataFrame, season: int, out_dir: Path) -> tuple[Week | None, str]:
+    """Return (the week to project now, or None with the reason there's nothing to do).
+
+    Nothing is projected after the season, in week 1, once any game of the week has a score
+    (projections must predate kickoff), or when the week's file already exists (a published
+    projection is never overwritten).
+    """
+    target = next_target_week(games, season)
+    if target is None:
+        return None, f"{season}: the season is over"
+    if target.week < 2:
+        return None, f"{target}: week 1 is never projected"
+    started = games.filter(
+        (pl.col("season") == season)
+        & (pl.col("week") == target.week)
+        & pl.col("points_for").is_not_null()
+    )
+    if started.height:
+        return None, f"{target}: games have already kicked off; too late to project"
+    if output_base(out_dir, target).with_suffix(".parquet").exists():
+        return None, f"{target}: already projected"
+    return target, ""
+
+
 def training_rows(past: pl.DataFrame, raw: RawData, target: Week) -> pl.DataFrame:
     """Past-season feature rows plus this season's labeled weeks before ``target``.
 
@@ -109,11 +146,16 @@ def project_week(
     return out.sort("projection", descending=True), train.height
 
 
+def output_base(out_dir: Path, target: Week) -> Path:
+    """The week's output path without a suffix (``.parquet`` data, ``.json`` manifest)."""
+    return out_dir / f"season={target.season}" / f"week={target.week:02d}"
+
+
 def write_projections(
     projections: pl.DataFrame, out_dir: Path, target: Week, info: dict[str, Any]
 ) -> tuple[Path, dict[str, Any]]:
     """Write the week's Parquet and manifest; return (parquet path, manifest)."""
-    base = out_dir / f"season={target.season}" / f"week={target.week:02d}"
+    base = output_base(out_dir, target)
     path = common.write_parquet_atomic(projections, base.with_suffix(".parquet"))
     digest = common.sha256_file(path)
     manifest = {
@@ -129,11 +171,25 @@ def write_projections(
     return path, manifest
 
 
+def week_arg(value: str) -> int | Literal["auto"]:
+    """Parse ``--week``: a number or ``auto``."""
+    if value == "auto":
+        return "auto"
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"expected a week number or 'auto', got {value!r}"
+        ) from None
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse command-line arguments; only live seasons are projected here."""
     parser = argparse.ArgumentParser(description=common.first_line(__doc__))
     parser.add_argument("--season", type=int, default=common.HOLDOUT_SEASON)
-    parser.add_argument("--week", type=int, required=True)
+    parser.add_argument(
+        "--week", type=week_arg, required=True, help="a week number, or 'auto' (next unplayed)"
+    )
     parser.add_argument("--raw-dir", type=Path, default=DEFAULT_RAW_DIR)
     parser.add_argument("--features-dir", type=Path, default=FEATURES_DIR)
     parser.add_argument("--params-dir", type=Path, default=DEFAULT_PARAMS_DIR)
@@ -143,7 +199,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.season < common.HOLDOUT_SEASON:
         parser.error("past seasons are evaluated by the backtest, not projected live")
-    if args.week < 2:
+    if args.week != "auto" and args.week < 2:
         parser.error("week 1 has no in-season data and is never projected")
     return args
 
@@ -152,13 +208,21 @@ def main(argv: list[str] | None = None) -> None:
     """CLI entry point."""
     common.configure_logging()
     args = parse_args(argv)
-    target = Week(args.season, args.week)
+    raw = load_raw(args.raw_dir)
+    if args.week == "auto":
+        auto, reason = auto_target(raw.games, args.season, args.out_dir)
+        if auto is None:
+            logger.info("nothing to project: %s", reason)
+            return
+        target = auto
+    else:
+        target = Week(args.season, args.week)
     ppath = params_path(args.season, args.params_dir)
     params = read_params(ppath)
     past = pl.scan_parquet(args.features_dir / "season=*.parquet").filter(
         pl.col("season") < args.season
     )
-    projections, n_train = project_week(past.collect(), load_raw(args.raw_dir), target, params)
+    projections, n_train = project_week(past.collect(), raw, target, params)
 
     commit = git_commit()
     features_manifest = args.features_dir / "manifest.json"
