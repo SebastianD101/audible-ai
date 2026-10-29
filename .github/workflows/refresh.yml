@@ -11,6 +11,8 @@ on:
   schedule:
     - cron: "0 12 * * 3"
   workflow_dispatch:
+  push:  # TEMP: exercise on the branch before merge
+    branches: [deploy]
 
 permissions:
   contents: write
