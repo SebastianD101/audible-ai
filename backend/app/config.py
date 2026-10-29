@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     projections_dir: Path = Path("ml/data/projections")
     rosters_dir: Path = Path("ml/data/raw/rosters_weekly")
     cors_origins: list[str] = ["http://localhost:3000"]
+    sleeper_api_url: str = "https://api.sleeper.app/v1"
 
     def resolved_parser(self) -> Literal["claude", "ocr"]:
         """The screenshot reader to use, with ``auto`` resolved."""

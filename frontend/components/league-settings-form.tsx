@@ -9,6 +9,7 @@ const SLOTS: { slot: SlotName; label: string }[] = [
   { slot: "RB", label: "RB" },
   { slot: "WR", label: "WR" },
   { slot: "TE", label: "TE" },
+  { slot: "WRRB_FLEX", label: "W/R flex (RB/WR)" },
   { slot: "FLEX", label: "FLEX (RB/WR/TE)" },
   { slot: "SUPERFLEX", label: "Superflex (QB/RB/WR/TE)" },
 ];

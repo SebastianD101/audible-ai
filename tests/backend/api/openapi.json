@@ -279,6 +279,7 @@
                 "RB",
                 "WR",
                 "TE",
+                "WRRB_FLEX",
                 "FLEX",
                 "SUPERFLEX"
               ]
@@ -743,6 +744,132 @@
         "title": "RecommendationResponse",
         "type": "object"
       },
+      "SleeperImportRequest": {
+        "description": "Which league to import, for which user.",
+        "properties": {
+          "league_id": {
+            "pattern": "^\\d{1,32}$",
+            "title": "League Id",
+            "type": "string"
+          },
+          "user_id": {
+            "pattern": "^\\d{1,32}$",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "league_id",
+          "user_id"
+        ],
+        "title": "SleeperImportRequest",
+        "type": "object"
+      },
+      "SleeperImportResponse": {
+        "description": "The user's roster and the league's best free agents, ready for review, plus settings.",
+        "properties": {
+          "free_agents": {
+            "$ref": "#/components/schemas/ParseResponse"
+          },
+          "league_name": {
+            "title": "League Name",
+            "type": "string"
+          },
+          "roster": {
+            "$ref": "#/components/schemas/ParseResponse"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/LeagueSettings"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "league_name",
+          "roster",
+          "free_agents",
+          "settings",
+          "warnings"
+        ],
+        "title": "SleeperImportResponse",
+        "type": "object"
+      },
+      "SleeperLeagueOut": {
+        "description": "One of the user's leagues, for the league picker.",
+        "properties": {
+          "league_id": {
+            "title": "League Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scoring": {
+            "title": "Scoring",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_rosters": {
+            "title": "Total Rosters",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "league_id",
+          "name",
+          "status",
+          "total_rosters",
+          "scoring"
+        ],
+        "title": "SleeperLeagueOut",
+        "type": "object"
+      },
+      "SleeperLeaguesResponse": {
+        "description": "A Sleeper user and their leagues for the season being projected.",
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "leagues": {
+            "items": {
+              "$ref": "#/components/schemas/SleeperLeagueOut"
+            },
+            "title": "Leagues",
+            "type": "array"
+          },
+          "season": {
+            "title": "Season",
+            "type": "integer"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username",
+          "display_name",
+          "season",
+          "leagues"
+        ],
+        "title": "SleeperLeaguesResponse",
+        "type": "object"
+      },
       "SwapOut": {
         "description": "An alternative single add/drop.",
         "properties": {
@@ -1001,6 +1128,94 @@
         "summary": "Create Recommendation",
         "tags": [
           "recommendations"
+        ]
+      }
+    },
+    "/api/sleeper/import": {
+      "post": {
+        "description": "Import the user's team and the league's free agents; both are stored like parses.",
+        "operationId": "import_sleeper_league_api_sleeper_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SleeperImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SleeperImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Sleeper League",
+        "tags": [
+          "sleeper"
+        ]
+      }
+    },
+    "/api/sleeper/leagues": {
+      "get": {
+        "description": "The user's leagues in the season the served projections cover.",
+        "operationId": "list_leagues_api_sleeper_leagues_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "maxLength": 40,
+              "minLength": 1,
+              "pattern": "^[\\w.-]+$",
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SleeperLeaguesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Leagues",
+        "tags": [
+          "sleeper"
         ]
       }
     },

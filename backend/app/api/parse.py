@@ -17,8 +17,10 @@ from backend.app.db.models import ParseRecord
 from backend.app.db.session import get_session
 from backend.app.parsing.extract import ConfigurationError, ExtractionError
 from backend.app.parsing.image import InvalidImageError
+from backend.app.parsing.players import PlayerIndex
 from backend.app.parsing.schemas import ParsedRoster
 from backend.app.parsing.service import parse_roster_screenshot
+from backend.app.projections import ProjectionTable
 from backend.app.search import PlayerHit, hits_for
 
 logger = logging.getLogger(__name__)
@@ -36,6 +38,31 @@ class ParseResponse(BaseModel):
     kind: ParseKind
     roster: ParsedRoster
     players: dict[str, PlayerHit]
+
+
+def store_parse(
+    session: Session,
+    kind: ParseKind,
+    roster: ParsedRoster,
+    index: PlayerIndex,
+    table: ProjectionTable,
+) -> ParseResponse:
+    """Persist a parsed roster and return it with display info for every player it mentions."""
+    record = ParseRecord(
+        kind=kind,
+        platform=roster.platform,
+        model=roster.model,
+        players=[p.model_dump(mode="json") for p in roster.players],
+        warnings=roster.warnings,
+    )
+    session.add(record)
+    session.flush()
+    ids = {c.player_id for p in roster.players for c in p.match.candidates}
+    ids |= {p.match.player_id for p in roster.players if p.match.player_id}
+    logger.info("parsed %s: %d players (record %s)", kind, len(roster.players), record.id)
+    return ParseResponse(
+        id=record.id, kind=kind, roster=roster, players=hits_for(index, table, ids)
+    )
 
 
 def read_capped(upload: UploadFile, max_bytes: int) -> bytes:
@@ -79,19 +106,4 @@ def parse_screenshot(
                 headers={"Retry-After": str(RETRY_AFTER_SECONDS)},
             ) from e
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e)) from e
-
-    record = ParseRecord(
-        kind=kind,
-        platform=roster.platform,
-        model=roster.model,
-        players=[p.model_dump(mode="json") for p in roster.players],
-        warnings=roster.warnings,
-    )
-    session.add(record)
-    session.flush()
-    ids = {c.player_id for p in roster.players for c in p.match.candidates}
-    ids |= {p.match.player_id for p in roster.players if p.match.player_id}
-    logger.info("parsed %s: %d players (record %s)", kind, len(roster.players), record.id)
-    return ParseResponse(
-        id=record.id, kind=kind, roster=roster, players=hits_for(index, table, ids)
-    )
+    return store_parse(session, kind, roster, index, table)

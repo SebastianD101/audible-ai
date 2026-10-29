@@ -30,6 +30,11 @@ PLAYERS: list[tuple[str, str, str, str, float | None, float]] = [
 ]
 
 
+def sleeper_id(player_id: str) -> str:
+    """A made-up numeric Sleeper ID per player: its index in ``PLAYERS`` plus 1000."""
+    return str(1000 + [p[0] for p in PLAYERS].index(player_id))
+
+
 def write_world(root: Path) -> tuple[Path, Path]:
     """Write ``rosters_weekly`` and one projections file; return (rosters_dir, projections_dir)."""
     rosters_dir, projections_dir = root / "rosters", root / "projections"
@@ -42,6 +47,7 @@ def write_world(root: Path) -> tuple[Path, Path]:
             "full_name": [p[1] for p in PLAYERS],
             "position": [p[2] for p in PLAYERS],
             "team": [p[3] for p in PLAYERS],
+            "sleeper_id": [sleeper_id(p[0]) for p in PLAYERS],
         },
         schema_overrides={"season": pl.Int32, "week": pl.Int32},
     ).write_parquet(rosters_dir / f"season={SEASON}.parquet")

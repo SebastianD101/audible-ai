@@ -7,6 +7,7 @@ defenses are added as synthetic ``DST:<TEAM>`` entries because nflverse has no d
 
 import unicodedata
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import get_args
 
@@ -46,6 +47,7 @@ class IndexedPlayer:
     team: str | None
     key: str  # normalize_name(name)
     aliases: tuple[str, ...] = ()  # other normalized names that should match exactly
+    sleeper_id: str | None = None  # Sleeper's player ID, from the nflverse crosswalk
 
 
 @dataclass(frozen=True)
@@ -60,6 +62,11 @@ class PlayerIndex:
         if position is None:
             return tuple(p for p in self.players if p.position != "DST")
         return tuple(p for p in self.players if p.position == position)
+
+    @cached_property
+    def by_sleeper_id(self) -> dict[str, IndexedPlayer]:
+        """Sleeper player ID -> player, for players the crosswalk covers."""
+        return {p.sleeper_id: p for p in self.players if p.sleeper_id is not None}
 
 
 def defense_entries() -> tuple[IndexedPlayer, ...]:
@@ -83,6 +90,8 @@ def build_player_index(rosters: pl.DataFrame, season: int) -> PlayerIndex:
     Rows without a ``gsis_id`` or outside fantasy positions are dropped; each ``gsis_id`` keeps
     its latest week, which also collapses upstream duplicate-ID rows to a single entry.
     """
+    if "sleeper_id" not in rosters.columns:
+        rosters = rosters.with_columns(pl.lit(None, dtype=pl.String).alias("sleeper_id"))
     latest = (
         rosters.filter(
             (pl.col("season") == season)
@@ -91,6 +100,8 @@ def build_player_index(rosters: pl.DataFrame, season: int) -> PlayerIndex:
             & pl.col("position").is_in(sorted(PLAYER_POSITIONS))
         )
         .sort(["gsis_id", "week"])
+        # Keep the last known Sleeper ID if the latest week's row lacks one.
+        .with_columns(pl.col("sleeper_id").forward_fill().over("gsis_id"))
         .unique(subset="gsis_id", keep="last", maintain_order=True)
     )
     players = tuple(
@@ -100,8 +111,11 @@ def build_player_index(rosters: pl.DataFrame, season: int) -> PlayerIndex:
             position=row["position"],
             team=row["team"],
             key=normalize_name(row["full_name"]),
+            sleeper_id=row["sleeper_id"],
         )
-        for row in latest.select("gsis_id", "full_name", "position", "team").iter_rows(named=True)
+        for row in latest.select(
+            "gsis_id", "full_name", "position", "team", "sleeper_id"
+        ).iter_rows(named=True)
     )
     return PlayerIndex(season=season, players=players + defense_entries())
 

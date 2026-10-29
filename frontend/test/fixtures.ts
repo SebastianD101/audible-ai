@@ -1,6 +1,12 @@
 /** Shared API-shaped fixtures for component and unit tests. */
 
-import type { ParseResponse, PlayerHit, Recommendation } from "@/lib/api";
+import type {
+  ParseResponse,
+  PlayerHit,
+  Recommendation,
+  SleeperImportResponse,
+  SleeperLeaguesResponse,
+} from "@/lib/api";
 
 export const allen: PlayerHit = {
   player_id: "qb1",
@@ -129,5 +135,77 @@ export function recommendation(
       summary: "In a 2020-2025 backtest, moves gained 1.98 points per week.",
     },
     ...overrides,
+  };
+}
+
+export const sleeperLeagues: SleeperLeaguesResponse = {
+  user_id: "111",
+  username: "someone",
+  display_name: "Someone",
+  season: 2026,
+  leagues: [
+    {
+      league_id: "900",
+      name: "Test League",
+      status: "in_season",
+      total_rosters: 12,
+      scoring: "PPR",
+    },
+    {
+      league_id: "901",
+      name: "Half League",
+      status: "in_season",
+      total_rosters: 10,
+      scoring: "Half PPR",
+    },
+  ],
+};
+
+/** A Sleeper import: one exact roster player and one free agent. */
+export function sleeperImport(): SleeperImportResponse {
+  const row = (player: PlayerHit, slot: string | null) => ({
+    extracted: {
+      name: player.name,
+      position: player.position,
+      nfl_team: player.team,
+      slot,
+      injury_tag: null,
+      legibility: "clear" as const,
+      note: null,
+    },
+    match: {
+      status: "matched" as const,
+      player_id: player.player_id,
+      score: 1,
+      candidates: [],
+    },
+    needs_review: false,
+  });
+  const parse = (
+    id: string,
+    kind: "roster" | "free_agents",
+    player: PlayerHit,
+    slot: string | null,
+  ): ParseResponse => ({
+    id,
+    kind,
+    roster: {
+      platform: "sleeper",
+      model: "sleeper-api",
+      warnings: [],
+      players: [row(player, slot)],
+    },
+    players: { [player.player_id]: player },
+  });
+  return {
+    league_name: "Test League",
+    roster: parse("s1", "roster", allen, "QB"),
+    free_agents: parse("s2", "free_agents", waiverWideout, null),
+    settings: {
+      scoring: "ppr",
+      slots: { QB: 1, RB: 2, WR: 3, TE: 1, WRRB_FLEX: 1, FLEX: 1 },
+      flex_positions: ["RB", "WR", "TE"],
+    },
+    warnings: ["Your league scores 0.5 per catch."],
   };
 }

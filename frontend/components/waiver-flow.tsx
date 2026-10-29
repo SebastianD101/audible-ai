@@ -19,6 +19,7 @@ import {
   getProjectionsMeta,
   type LeagueSettings,
   type RecommendationRequest,
+  type SleeperImportResponse,
 } from "@/lib/api";
 import {
   resolvedIds,
@@ -30,6 +31,7 @@ import {
 import { LeagueSettingsForm } from "./league-settings-form";
 import { RecommendationView } from "./recommendation-view";
 import { ReviewTable } from "./review-table";
+import { SleeperImportCard } from "./sleeper-import-card";
 import { UploadCard } from "./upload-card";
 
 function ProjectionsBanner() {
@@ -94,6 +96,13 @@ export function WaiverFlow() {
 
   const blocked = blocker(roster, freeAgents);
 
+  function applyImport(result: SleeperImportResponse) {
+    recommendation.reset();
+    setRoster(rowsFromParse(result.roster));
+    setFreeAgents(rowsFromParse(result.free_agents));
+    setSettings(result.settings);
+  }
+
   function submit() {
     const request: RecommendationRequest = {
       roster: resolvedIds(roster),
@@ -115,10 +124,11 @@ export function WaiverFlow() {
         <h2 id="roster-heading" className="text-lg font-semibold">
           1. Your roster
         </h2>
+        <SleeperImportCard onImported={applyImport} />
         <UploadCard
           kind="roster"
           title="Roster screenshot"
-          description="A screenshot of your team page from ESPN, Yahoo, Sleeper, or similar."
+          description="Not on Sleeper? Upload a screenshot of your team page from ESPN, Yahoo, or any other platform."
           onParsed={(r) => edit(setRoster)(rowsFromParse(r))}
         />
         <ReviewTable
@@ -137,7 +147,7 @@ export function WaiverFlow() {
         <UploadCard
           kind="free_agents"
           title="Waiver-wire screenshot"
-          description="A screenshot of your league's available players. Only players you list are considered."
+          description="A screenshot of your league's available players. Only players you list are considered. A Sleeper import fills this in for you."
           onParsed={(r) =>
             edit(setFreeAgents)([...freeAgents, ...rowsFromParse(r)])
           }

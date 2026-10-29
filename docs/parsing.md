@@ -4,6 +4,10 @@ Turns a roster screenshot into an ID-matched roster that the user reviews before
 downstream uses it. Code: `backend/app/parsing/`. Design choices: `docs/decisions.md`
 (2026-10-27).
 
+Sleeper leagues don't need a screenshot: the Sleeper import (`backend/app/sleeper/`, see
+`docs/api.md`) reads the roster from Sleeper's API with exact IDs. Screenshots are for ESPN,
+Yahoo, and everything else.
+
 ## Pipeline
 
 ```
