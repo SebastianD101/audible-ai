@@ -446,3 +446,35 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
   any contract change shows up in review.
 - **Not yet measured:** extraction accuracy on real screenshots, and live 2026 accuracy. Both
   need data that doesn't exist yet: labeled screenshots, and completed weeks.
+
+## 2026-10-28: Deployment and weekly refresh (Phase 9)
+
+- **Fly.io for the API, Neon for Postgres, Vercel for the frontend.** The API already ships as
+  a Docker image, and Fly runs it unchanged and scales it to zero between visits (a few dollars
+  a month at demo traffic). Neon's free tier is plain Postgres, so migrations and the CI
+  Postgres test cover it. Vercel is the zero-config home for Next.js and needs only
+  `NEXT_PUBLIC_API_URL`. Every piece is replaceable: nothing provider-specific sits in the app
+  code beyond accepting `postgres://` URLs.
+- **The week's data is baked into the image.** The Dockerfile's default `serve` target adds
+  the projections and current rosters to the code-only `runtime` image (which compose and CI
+  still use). The 2026-10-22 entry deferred this choice. Baking wins over a bucket because
+  the data is tiny (about 20 KB of projections, a few MB of rosters). It also makes each
+  release immutable: rolling back the app rolls back the data it served, and the API needs no
+  storage credentials.
+- **Live projections are committed to git.** `ml/data/projections/` is the one tracked
+  directory under `ml/data/`. The bot's commit, made before Thursday kickoff, is a public
+  timestamp that the week's projections predate its games. That is what makes the live 2026
+  evaluation (`ml.serve.evaluate`, `docs/live-2026.md`) believable to someone who doesn't
+  trust me. The evaluator also excludes any week whose manifest was generated after its first
+  kickoff.
+- **`--week auto` fails safe.** It picks the first week with an unplayed game. It skips, and
+  exits successfully, if that week is already projected or any of its games has a score. A
+  late or repeated scheduled run is therefore a no-op, never an overwrite or a leak.
+- **Schedule: Wednesday 12:00 UTC.** That's after Monday night's game and the overnight
+  nflverse update, and well before Thursday's kickoff. On a cold cache the whole pipeline
+  (ingest 2018-2026, build features, refit, project) runs on Actions in about a minute.
+- **The public demo reads screenshots with local OCR.** `PARSER=ocr` is set in `fly.toml`, so
+  anonymous visitors can't run up Anthropic charges. Claude stays an opt-in secret.
+- **Deploys are gated on `FLY_API_TOKEN`.** Without it, the deploy workflow builds and
+  smoke-tests the `serve` image and stops with a notice. CI stays green on forks and before
+  setup.
