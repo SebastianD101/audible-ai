@@ -19,8 +19,16 @@ DEFAULT_DATABASE_URL = "sqlite:///audible.db"
 
 
 def database_url(settings: Settings | None = None) -> str:
-    """The configured database URL, or the local SQLite default."""
-    return (settings or get_settings()).database_url or DEFAULT_DATABASE_URL
+    """The configured database URL, or the local SQLite default.
+
+    Hosted Postgres providers (Neon, Fly, Railway) hand out ``postgres://`` or
+    ``postgresql://`` URLs, which SQLAlchemy maps to psycopg2; this app installs psycopg 3.
+    """
+    url = (settings or get_settings()).database_url or DEFAULT_DATABASE_URL
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url.removeprefix(prefix)
+    return url
 
 
 @lru_cache
