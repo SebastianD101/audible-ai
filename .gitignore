@@ -14,6 +14,9 @@ build/
 # Data and experiment tracking (reproducible via scripts)
 ml/data/**
 !ml/data/.gitkeep
+# Live projections are committed: the commit time proves each week predates its games.
+!ml/data/projections/
+!ml/data/projections/**
 mlruns/
 mlartifacts/
 

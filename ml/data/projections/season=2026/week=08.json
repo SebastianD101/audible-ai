@@ -1,0 +1,32 @@
+{
+  "season": 2026,
+  "week": 8,
+  "version": "02ba5fd5c7db",
+  "sha256": "02ba5fd5c7db3cf83127a2b9f58f1bf4c0364e955609dd46331c4e66457cb9d2",
+  "rows": 546,
+  "generated_at_utc": "2026-10-27T23:13:47+00:00",
+  "model": "lgbm",
+  "params": {
+    "objective": "regression",
+    "learning_rate": 0.021525131120688525,
+    "n_estimators": 600,
+    "num_leaves": 20,
+    "min_data_in_leaf": 118,
+    "feature_fraction": 0.6556647253236163,
+    "bagging_fraction": 0.6398144785243873,
+    "lambda_l2": 0.1628483951619897,
+    "tweedie_variance_power": 1.5
+  },
+  "params_sha256": "3317299124ce57b461ad59605a1196d44e3284063599207c05b5e609c59a3298",
+  "train_rows": 80537,
+  "git_commit": "4d37d264632f407ac772d1d0ca2ddd6e77741263-dirty",
+  "features_manifest_sha256": "11aaf0fc86c5974d8afee5379bec69abdaca7dc28a15fd9a249f828dbb01f678",
+  "raw_manifest_sha256": {
+    "player_stats/manifest.json": "89f5dd108da9caba66446c6514286998c1b7b895df7166ae3ab7a639a6142d2a",
+    "schedules/manifest.json": "b04a542a456ab4240bf402738d5123f74b54a26112fa0568c7e80a6024cb94c5",
+    "rosters_weekly/manifest.json": "089f2401b83be305319da81094d36a861885708b7765039659059e91d3c06849",
+    "injuries/manifest.json": "bbf87ef9a4be7d9db7733d7777588dc68aace140a88c47ec40e7d59c047b06f4",
+    "snap_counts/manifest.json": "4665deb47670d2ce4c3e1479df8967b460909747f6544ea95f6c192b847894ae",
+    "players/manifest.json": "31f6a307ea8567dd54d8ebc7a6bc1a39d14075afd058b98bdafa063c8831ea98"
+  }
+}
