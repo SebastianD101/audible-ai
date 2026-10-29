@@ -24,7 +24,9 @@ services:
       retries: 30
 
   migrate:
-    build: .
+    build: &build
+      context: .
+      target: runtime
     command: ["alembic", "-c", "backend/alembic.ini", "upgrade", "head"]
     environment:
       DATABASE_URL: *database-url
@@ -33,7 +35,7 @@ services:
         condition: service_healthy
 
   backend:
-    build: .
+    build: *build
     env_file:
       - path: .env
         required: false

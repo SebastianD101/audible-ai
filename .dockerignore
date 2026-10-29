@@ -7,6 +7,9 @@
 .env
 .env.*
 ml/data
+# Baked into the `serve` target (the projections are committed; rosters are ingested first).
+!ml/data/projections
+!ml/data/raw/rosters_weekly
 mlruns
 frontend
 tests
