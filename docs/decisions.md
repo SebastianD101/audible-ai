@@ -269,6 +269,8 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
 
 ## 2026-10-27: Screenshot parsing (Phase 6)
 
+_Superseded 2026-11-09: screenshot parsing was removed (see the last entry)._
+
 - **Anthropic SDK pinned at `anthropic==1.12.1`**, the newest release before the uv
   `exclude-newer` cutoff. The 2.x line (2026-10-21 onward) is too new under the pinning policy.
 - **Structured outputs, not free-form JSON.** `client.messages.parse(output_format=ExtractedRoster)`
@@ -295,7 +297,7 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
 - **`needs_review`** is true unless the row was read `clear`, matched uniquely, and no other
   row matched the same player. Phase 8's review screen is where those rows get corrected.
 - **2026 weekly rosters are ingested for ID lookup only.** Current-season rosters are needed
-  to match rookies and traded players. They're read by `backend.app.parsing.players` and never
+  to match rookies and traded players. They're read by `backend.app.roster.players` and never
   by features, training, or tuning, so the 2026 holdout is unaffected.
 - **Images:** type comes from magic bytes (PNG, JPEG, WebP, GIF), never the filename. The size
   is capped at 5 MB (the API's per-image limit; `MAX_UPLOAD_BYTES` can only lower it). Images
@@ -333,6 +335,8 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
   positions are over- or undervalued, rather than a silent rescale the model wasn't trained on.
 
 ## 2026-10-28: Local OCR as a free screenshot reader
+
+_Superseded 2026-11-09: removed with the rest of screenshot parsing._
 
 - **Why:** Claude vision is billed per upload, so a public demo either needs a key or can't
   parse at all. Local OCR makes parsing free and keyless, at some cost in robustness.
@@ -478,3 +482,24 @@ snap counts use `OAK`. `ml.features.load` maps OAK to LV in team columns. `game_
 - **Deploys are gated on `FLY_API_TOKEN`.** Without it, the deploy workflow builds and
   smoke-tests the `serve` image and stops with a notice. CI stays green on forks and before
   setup.
+
+## 2026-11-09: Remove screenshot parsing; Sleeper import and add-by-name only
+
+- **What changed:** removed Claude vision extraction, local OCR (RapidOCR on ONNX Runtime),
+  `/api/parse`, the parse CLI, and the upload UI. Dropped the `anthropic`, `onnxruntime`,
+  `rapidocr`, and `opencv-python-headless` dependencies.
+- **Why:**
+  - Sleeper import is strictly better input when it's available. It gives exact player IDs
+    through the crosswalk, the league's whole free-agent pool rather than what fit on screen,
+    and the real lineup settings.
+  - Parsing accuracy was never measured (there was no labeled screenshot set), so the feature
+    shipped without evidence that it works. That conflicts with the project's evaluation
+    standard.
+  - The public demo had to choose between billed Claude calls and weaker local OCR.
+- **Cost:** users on ESPN, Yahoo, and other platforms now add players by name instead of
+  uploading. The add-by-name search and review table already existed, so nothing new had to be
+  built.
+- **Kept:** the player index, team codes, review-row schemas (`ExtractedPlayer`, `ParsedRoster`),
+  and name scoring moved to `backend/app/roster/`. Sleeper import and search use them. The
+  schema names and the `parse_records` table predate the change and are kept, so the API shape
+  and the database need no migration.

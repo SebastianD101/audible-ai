@@ -1,17 +1,17 @@
-"""Player search for correcting parsed rows and building the free-agent list.
+"""Player search for correcting imported rows and building the roster and free-agent lists.
 
-Searches the same player index the parser matches against (every rostered player this season,
+Searches the player index (every rostered player this season,
 including kickers, defenses, and players on bye, who have no projection), so anything the user
 can see in their league can be found. A typed prefix of any name token ranks first, so "jah"
-finds Jahmyr Gibbs; otherwise the parser's fuzzy name score applies.
+finds Jahmyr Gibbs; otherwise the fuzzy name score in ``roster.names`` applies.
 """
 
 from pydantic import BaseModel
 
-from backend.app.parsing.match import name_score, ratio
-from backend.app.parsing.players import IndexedPlayer, PlayerIndex, normalize_name
-from backend.app.parsing.schemas import Position
 from backend.app.projections import ProjectionTable
+from backend.app.roster.names import name_score, ratio
+from backend.app.roster.players import IndexedPlayer, PlayerIndex, normalize_name
+from backend.app.roster.schemas import Position
 
 MIN_SCORE = 0.6
 PREFIX_SCORE = 1.0

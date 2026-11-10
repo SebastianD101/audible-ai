@@ -8,14 +8,6 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export const ACCEPTED_IMAGE_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-] as const;
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-
 export type Position = "QB" | "RB" | "WR" | "TE" | "K" | "DST";
 export type Legibility = "clear" | "partial" | "guessed";
 export type MatchStatus = "matched" | "ambiguous" | "unmatched";
@@ -244,16 +236,6 @@ export function searchPlayers(
   return request(`/api/players/search?${params}`);
 }
 
-export function parseScreenshot(
-  file: File,
-  kind: ParseKind,
-): Promise<ParseResponse> {
-  const form = new FormData();
-  form.append("file", file);
-  form.append("kind", kind);
-  return request("/api/parse", { method: "POST", body: form });
-}
-
 export function getSleeperLeagues(
   username: string,
 ): Promise<SleeperLeaguesResponse> {
@@ -280,15 +262,4 @@ export function createRecommendation(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-}
-
-/** Client-side check before uploading; the server re-validates by file contents. */
-export function checkImage(file: File): string | null {
-  if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-    return "Upload a PNG, JPEG, WebP, or GIF screenshot.";
-  }
-  if (file.size > MAX_UPLOAD_BYTES)
-    return "Screenshots must be 5 MB or smaller.";
-  if (file.size === 0) return "That file is empty.";
-  return null;
 }

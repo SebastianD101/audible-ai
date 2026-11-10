@@ -4,16 +4,28 @@ from typing import Any
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_sleeper
 from backend.app.config import Settings
+from backend.app.db.models import ParseRecord
 from backend.app.main import app
-from tests.backend.api.test_parse import records
 from tests.backend.api.world import SEASON
 from tests.backend.sleeper.fake import LEAGUE_ID, USER_ID, league, routes
 from tests.backend.sleeper.fake import client as fake_sleeper
 
 Install = Callable[..., None]
+
+
+def records(settings: Settings) -> list[ParseRecord]:
+    assert settings.database_url is not None
+    engine = create_engine(settings.database_url)
+    try:
+        with Session(engine) as session:
+            return list(session.scalars(select(ParseRecord)))
+    finally:
+        engine.dispose()
 
 
 @pytest.fixture

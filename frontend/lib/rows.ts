@@ -1,7 +1,7 @@
 /**
- * Review rows: the user-editable version of a parsed screenshot.
+ * Review rows: the user-editable version of an imported roster or free-agent list.
  *
- * A row the parser flagged (unclear text, ambiguous or missing match, duplicate) must be
+ * A flagged row (a player missing from the ID crosswalk, an ambiguous match, a duplicate) must be
  * confirmed, changed, or removed before recommendations run. A row the user picked by hand
  * is confirmed by definition.
  */

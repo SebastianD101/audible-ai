@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from backend.app.parsing.players import build_player_index, load_player_index, normalize_name
-from tests.backend.parsing.frames import rosters
+from backend.app.roster.players import build_player_index, load_player_index, normalize_name
+from tests.backend.roster.frames import rosters
 
 
 @pytest.mark.parametrize(

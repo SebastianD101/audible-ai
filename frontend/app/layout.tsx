@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Audible AI",
   description:
-    "Screenshot your fantasy roster, get data-driven waiver-wire pickups.",
+    "Import your fantasy roster, get data-driven waiver-wire pickups.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

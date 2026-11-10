@@ -1,8 +1,9 @@
 # Audible AI
 
-Audible AI turns a screenshot of a fantasy football roster into data-driven waiver-wire recommendations.
-A vision model extracts the roster, a gradient-boosted model projects next-week points per player, and an
-optimizer suggests the add/drop swaps with the highest expected gain. Results are validated with a
+Audible AI turns a Sleeper fantasy football league (or a roster typed in by name) into data-driven
+waiver-wire recommendations. Sleeper's public API supplies the roster, free agents, and lineup settings, a
+gradient-boosted model projects next-week points per player, and an optimizer suggests the add/drop swaps
+with the highest expected gain. Results are validated with a
 leakage-free walk-forward backtest against expert consensus rankings.
 
 This is a portfolio project for ML, software engineering, and project management roles. Code quality,
@@ -12,7 +13,7 @@ reproducibility, honest evaluation, and clear documentation matter as much as mo
 
 - **ML / data:** Python 3.12, uv, Polars, scikit-learn, LightGBM, Optuna, MLflow (local), nflreadpy (nflverse)
 - **Backend:** FastAPI, Pydantic v2, SQLAlchemy, Postgres, Alembic
-- **Screenshot parsing:** Anthropic API (vision). Model name comes from the `ANTHROPIC_MODEL` env var, never hardcoded. Free local fallback: RapidOCR on ONNX Runtime (`PARSER=ocr`).
+- **League import:** Sleeper public API (no login), matched to nflverse IDs via the crosswalk. Screenshot parsing was removed on 2026-11-09 (see `docs/decisions.md`).
 - **Optimizer:** PuLP or OR-Tools (linear programming)
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind, shadcn/ui, TanStack Query
 - **Ops:** Docker, docker-compose, GitHub Actions (CI and weekly data refresh), Fly.io or Railway for deploy
@@ -27,7 +28,7 @@ audible-ai/
     features/
     models/
     backtest/
-  backend/         # FastAPI app: parsing, projections, recommendations
+  backend/         # FastAPI app: Sleeper import, projections, recommendations
   frontend/        # Next.js app
   docs/            # PRD, architecture diagram, backtest report, decisions
   .github/workflows/
@@ -40,9 +41,9 @@ audible-ai/
 3. Features: rolling usage, defense-vs-position (strength-of-schedule adjusted), game context
 4. Backtest harness and naive baseline (last-3-weeks average)
 5. LightGBM model, tuning, comparison against baseline and expert consensus
-6. Screenshot parsing: image to validated roster JSON, matched to player IDs
+6. Screenshot parsing: image to validated roster JSON, matched to player IDs (removed 2026-11-09 in favor of Sleeper import)
 7. Optimizer: best add/drop swaps given roster, league scoring, and free agents
-8. API and UI: upload, parsed roster review, recommendations
+8. API and UI: Sleeper import or add-by-name, roster review, recommendations
 9. Deployment, README, results write-up
 
 Finish and commit each phase before starting the next. Do not start a later phase unless asked.
@@ -68,13 +69,13 @@ Finish and commit each phase before starting the next. Do not start a later phas
 - Pydantic models for every API request, response, and parsed roster.
 - Every pipeline step and feature gets a pytest test; leakage checks get dedicated tests.
 - TypeScript strict mode. Components are small and typed, with loading and error states.
-- Handle errors explicitly. The screenshot parser must return confidence flags and let the user correct players.
+- Handle errors explicitly. Imported rows that don't match a player ID must be flagged so the user can correct them.
 - Commits: small, imperative messages (e.g., "Add rolling target share feature").
 
 ## Security and secrets
 
 - Never commit secrets. Keys live in `.env` (gitignored); keep `.env.example` up to date.
-- Never print or log API keys. Validate and size-limit uploaded images; do not persist screenshots by default.
+- Never print or log API keys or credentials (including the password in `DATABASE_URL`).
 - Pin dependency versions and avoid brand-new releases when choosing packages.
 
 ## Commands
@@ -91,9 +92,7 @@ Finish and commit each phase before starting the next. Do not start a later phas
 - Backtest: `uv run python -m ml.backtest.run --start-season 2020 --end-season 2025` (default models `last3,season_avg,lgbm`; add `lgbm_kickoff` for the ablation; `--no-tune` skips Optuna, `--trials N` sets its budget; 2018-2019 are tuning history; 2026 is rejected)
 - MLflow UI: `uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db`
 - Pickup backtest (reuses the newest backtest run's predictions): `uv run python -m ml.backtest.pickups --start-season 2020 --end-season 2025` (`--rosters N`, `--max-moves 1,2`, `--predictions <path>`; about 20 min)
-- Current-season rosters (ID lookup for parsing only, never training): `uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026`
-- Parse a screenshot (real, billed API call): `uv run python -m backend.app.parsing <image> [--season 2026]` (`--parser ocr` reads it locally for free; `PARSER=auto|claude|ocr` sets the default)
-- Real OCR engine tests (~31 MB models on first run): `uv run pytest -m ocr`
+- Current-season rosters (ID lookup for Sleeper import and search only, never training): `uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026`
 - Live Sleeper API test: `SLEEPER_TEST_USERNAME=<username> uv run pytest -m network tests/backend/sleeper`
 - Live data refresh: the same ingest commands with `--start-season 2026 --end-season 2026` (weekly_stats, schedules, injuries, snap_counts, rosters_weekly)
 - Serving params (tunes on <=2025 only; commit the JSON): `uv run python -m ml.serve.params --season 2026`

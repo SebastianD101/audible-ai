@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from backend.app.api.deps import PlayerIndexDep, ProjectionsDep
-from backend.app.parsing.schemas import Position
 from backend.app.projections import ProjectionsMeta
+from backend.app.roster.schemas import Position
 from backend.app.search import PlayerHit, search_players
 
 router = APIRouter(prefix="/api", tags=["projections"])

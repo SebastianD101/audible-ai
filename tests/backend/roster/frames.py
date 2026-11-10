@@ -1,8 +1,8 @@
-"""Small in-memory weekly-roster frames for parsing tests."""
+"""Small in-memory weekly-roster frames for roster tests."""
 
 import polars as pl
 
-from backend.app.parsing.schemas import ExtractedPlayer
+from backend.app.roster.schemas import ExtractedPlayer
 
 ROWS: list[tuple[str, int, str, str, str]] = [
     # gsis_id, week, full_name, position, team

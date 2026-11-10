@@ -10,8 +10,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from backend.app.parsing.players import PlayerIndex
 from backend.app.projections import ProjectionsMeta, ProjectionTable
+from backend.app.roster.players import PlayerIndex
 from backend.app.search import PlayerHit, to_hit
 from ml.optimize.league import LeagueSettings, Player
 from ml.optimize.lineup import Lineup

@@ -40,7 +40,8 @@ jobs:
           version: "0.13.5"
           enable-cache: true
       - run: uv sync --locked
-      # The player index the parser matches names against (identification only, never training).
+      # The player index Sleeper import and search resolve players against (ID lookup only, never
+      # training).
       - name: Ingest current-season rosters
         run: uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026
       - name: Check projections are present
