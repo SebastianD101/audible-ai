@@ -37,38 +37,47 @@ describe("blocker", () => {
 });
 
 describe("WaiverFlow", () => {
-  it("goes from screenshot to recommendation once flagged rows are resolved", async () => {
+  it("goes from players added by name to a recommendation", async () => {
     const fetchMock = stubApi({
       "/api/projections/meta": () => jsonResponse(200, META),
-      "/api/parse": () => jsonResponse(200, parseResponse()),
-      "/api/players/search": () => jsonResponse(200, [waiverWideout]),
+      "/api/players/search": () => jsonResponse(200, [allen, waiverWideout]),
       "/api/recommendations": () => jsonResponse(200, recommendation()),
     });
     renderWithClient(<WaiverFlow />);
     expect(await screen.findByText(/2026 week 8/)).toBeInTheDocument();
-
-    await userEvent.upload(
-      screen.getByLabelText("Roster screenshot screenshot"),
-      new File(["png"], "roster.png", { type: "image/png" }),
-    );
-    expect(
-      await screen.findByText("Resolve 1 flagged row first."),
-    ).toBeVisible();
     const button = screen.getByRole("button", { name: "Get recommendation" });
     expect(button).toBeDisabled();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Remove M. Williams" }),
+    await userEvent.type(
+      screen.getByPlaceholderText("Add a roster player by name"),
+      "allen",
     );
+    const rosterSection = screen.getByRole("region", {
+      name: "1. Your roster",
+    });
+    let results = await within(rosterSection).findByRole("list", {
+      name: "Search results",
+    });
     await userEvent.click(
-      screen.getByRole("button", { name: "Keep Josh Allen" }),
+      within(results).getByRole("button", { name: /Josh Allen/ }),
     );
+    expect(
+      await screen.findByText("Add at least one free agent."),
+    ).toBeVisible();
+
     await userEvent.type(
       screen.getByPlaceholderText("Add a free agent by name"),
       "waiv",
     );
-    const results = await screen.findByRole("list", { name: "Search results" });
-    await userEvent.click(within(results).getByRole("button"));
+    const faSection = screen.getByRole("region", {
+      name: "2. Available free agents",
+    });
+    results = await within(faSection).findByRole("list", {
+      name: "Search results",
+    });
+    await userEvent.click(
+      within(results).getByRole("button", { name: /Waiver Wideout/ }),
+    );
     expect(button).toBeEnabled();
 
     await userEvent.click(button);
@@ -83,7 +92,6 @@ describe("WaiverFlow", () => {
     expect(body).toMatchObject({
       roster: [allen.player_id],
       free_agents: [waiverWideout.player_id],
-      locked: [allen.player_id],
       max_moves: 1,
     });
   });
