@@ -1,6 +1,7 @@
 """ORM tables. JSON columns keep the schema portable (Postgres in deployment, SQLite in tests).
 
-Screenshots are never stored: a parse record keeps only the extracted text and matches.
+A parse record holds one imported player list (the name predates Sleeper import, when records
+were parsed screenshots): its rows and how each matched.
 """
 
 import uuid
@@ -21,7 +22,7 @@ class Base(DeclarativeBase):
 
 
 class ParseRecord(Base):
-    """One parsed screenshot: what was read and how each row matched."""
+    """One imported player list: its rows and how each matched."""
 
     __tablename__ = "parse_records"
 

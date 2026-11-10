@@ -1,4 +1,4 @@
-"""Turn a Sleeper league into the same shapes a parsed screenshot produces.
+"""Turn a Sleeper league into review rows, free agents, and lineup settings.
 
 - **Players** map to nflverse IDs through the ``sleeper_id`` crosswalk in ``rosters_weekly``, and
   team defenses map from Sleeper's team codes. These are exact IDs, so rows are ``clear`` and

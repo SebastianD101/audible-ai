@@ -7,8 +7,8 @@ Output: ``ml/data/raw/rosters_weekly/season=YYYY.parquet`` plus ``manifest.json`
 
 One row per player per week (``gsis_id``, ``week``) with team, position, depth-chart position,
 roster ``status`` (ACT, RES, INA, CUT, ...; the code set varies by season), experience, and
-cross-platform IDs (``sleeper_id``, ``espn_id``, ``yahoo_id``, ``pfr_id``) used later to match
-parsed screenshot rosters. A handful of rows per season have a null ``gsis_id``; they are kept
+cross-platform IDs (``sleeper_id``, ``espn_id``, ``yahoo_id``, ``pfr_id``) used to match
+Sleeper league rosters. A handful of rows per season have a null ``gsis_id``; they are kept
 and counted in the manifest.
 
 Duplicate ``(gsis_id, week)`` rows are kept and counted rather than rejected, because upstream

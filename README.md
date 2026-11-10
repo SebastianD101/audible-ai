@@ -1,9 +1,9 @@
 # Audible AI
 
-Turn a screenshot of your fantasy football roster, or a Sleeper league, into data-driven
-waiver-wire recommendations. A vision model (or free local OCR) extracts the roster, a
-gradient-boosted model projects next-week points, and an optimizer suggests the add/drop swaps
-with the highest expected gain. Everything is evaluated with a leakage-free walk-forward
+Turn your Sleeper fantasy football league into data-driven waiver-wire recommendations.
+Sleeper's public API supplies your roster, the league's free agents, and its lineup settings (or
+you add players by name), a gradient-boosted model projects next-week points, and an optimizer
+suggests the add/drop swaps with the highest expected gain. Everything is evaluated with a leakage-free walk-forward
 backtest against simple baselines, plus a live 2026 holdout whose projections are committed
 before kickoff.
 
@@ -22,12 +22,12 @@ before kickoff.
 | 3 | Features | Done: 63 waiver-time features (usage, SOS-adjusted defense vs position, context, availability, vacated opportunity), leakage-tested |
 | 4 | Backtest harness + naive baseline | Done: walk-forward harness, week-block bootstrap CIs, MLflow; baselines in [docs/backtest.md](docs/backtest.md) |
 | 5 | LightGBM model + comparison | Done: nested-tuned LightGBM vs both baselines, kickoff-information ablation; expert consensus deferred (terms of use) |
-| 6 | Screenshot parsing | Done: Claude vision + structured outputs to validated roster JSON, matched to nflverse IDs with per-player review flags; free local OCR (RapidOCR) when no API key is set ([docs/parsing.md](docs/parsing.md)); extraction accuracy not yet measured. Sleeper leagues import directly from Sleeper's API with exact IDs, the league's free agents, and lineup settings |
+| 6 | Roster input | Done: Sleeper league import with exact nflverse IDs, the league's free agents, and lineup settings, plus add-by-name search. Screenshot parsing (Claude vision and local OCR) was built, then removed in favor of Sleeper import ([decisions](docs/decisions.md)) |
 | 7 | Optimizer | Done: MILP add/drop recommender (PuLP/CBC) with a season-value drop guard, plus a historical pickup backtest ([docs/pickups.md](docs/pickups.md)); PPR only |
-| 8 | API and UI | Done: weekly live projections job (2026 refits, tuning only on ≤2025), FastAPI endpoints with Postgres/Alembic persistence (never images), Next.js upload → review → recommendation flow showing backtest evidence ([docs/api.md](docs/api.md)) |
+| 8 | API and UI | Done: weekly live projections job (2026 refits, tuning only on ≤2025), FastAPI endpoints with Postgres/Alembic persistence (never images), Next.js import → review → recommendation flow showing backtest evidence ([docs/api.md](docs/api.md)) |
 | 9 | Deployment and write-up | Done: Fly.io API with the week's data baked into the image, Neon Postgres, Vercel UI; weekly GitHub Actions refresh (ingest → `--week auto` → live evaluation → commit → deploy) ([docs/deploy.md](docs/deploy.md)); results write-up in [docs/results.md](docs/results.md) |
 
-Results are in [docs/backtest.md](docs/backtest.md). On 2020-2025 walk-forward (101 weeks, 15,756 relevant player-weeks), LightGBM beats the stronger baseline (season average) by 1.89 RMSE [1.80, 2.01] and +0.28 weekly Spearman [0.27, 0.30]. Most of that gain comes from knowing who won't play. In a simulated-league pickup backtest ([docs/pickups.md](docs/pickups.md), 5,050 roster-weeks), acting on LightGBM's one-move recommendation gains 1.98 [1.27, 2.75] real points per week, against 0.48 [−0.32, 1.37] for last-3-driven moves (paired difference +1.50 [0.36, 2.53]). There's no expert-consensus comparison yet, so nothing here is a claim about beating experts. Weekly fantasy scoring is noisy, so every comparison is reported with sample sizes and paired bootstrap intervals. Live 2026 tracking ([docs/live-2026.md](docs/live-2026.md)) started at week 8; no week has been scored yet.
+Results are in [docs/backtest.md](docs/backtest.md). On 2020-2025 walk-forward (101 weeks, 15,756 relevant player-weeks), LightGBM beats the stronger baseline (season average) by 1.89 RMSE [1.80, 2.01] and +0.28 weekly Spearman [0.27, 0.30]. Most of that gain comes from knowing who won't play. In a simulated-league pickup backtest ([docs/pickups.md](docs/pickups.md), 5,050 roster-weeks), acting on LightGBM's one-move recommendation gains 1.98 [1.27, 2.75] real points per week, against 0.48 [−0.32, 1.37] for last-3-driven moves (paired difference +1.50 [0.36, 2.53]). There's no expert-consensus comparison yet, so nothing here is a claim about beating experts. Weekly fantasy scoring is noisy, so every comparison is reported with sample sizes and paired bootstrap intervals. Live 2026 tracking ([docs/live-2026.md](docs/live-2026.md)) started at week 8; one week is scored so far, far too few to conclude anything.
 
 ## Layout
 
@@ -39,9 +39,10 @@ ml/          data ingestion, features, models, backtests (no web code)
   optimize/  lineup and add/drop MILP (PuLP/CBC)
   serve/     weekly live projections job and committed serving params
 backend/     FastAPI app (see docs/api.md)
-  app/api/      HTTP routes: projections, search, parse, recommendations
+  app/api/      HTTP routes: projections, search, Sleeper import, recommendations
   app/db/       SQLAlchemy models; migrations in backend/alembic/
-  app/parsing/  screenshot -> validated, ID-matched roster (see docs/parsing.md)
+  app/roster/   player index, team codes, review-row schemas, name matching
+  app/sleeper/  Sleeper API client and league import
 frontend/    Next.js (App Router, TypeScript, Tailwind)
 tests/       pytest suite mirroring ml/ and backend/
 docs/        results, architecture, deployment, decisions log, reports
@@ -53,7 +54,7 @@ Requires [uv](https://docs.astral.sh/uv/) and Node 24.
 
 ```bash
 uv sync                          # Python 3.12 env from uv.lock
-cp .env.example .env             # fill in keys; never commit .env
+cp .env.example .env             # optional: DATABASE_URL etc.; never commit .env
 uv run pre-commit install
 
 # Data: every 2018-2025 dataset -> ml/data/raw/<dataset>/
@@ -67,11 +68,8 @@ uv run python -m ml.features.build --start-season 2018 --end-season 2025
 uv run python -m ml.backtest.run --start-season 2020 --end-season 2025
 uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db
 
-# Screenshot parsing: current-season rosters for ID lookup, then one real (billed) API call,
-# or --parser ocr to read it locally for free (PARSER=auto uses OCR when no API key is set)
+# Current-season rosters: the player index Sleeper import and search resolve IDs against
 uv run python -m ml.ingest.rosters_weekly --start-season 2026 --end-season 2026
-uv run python -m backend.app.parsing path/to/screenshot.png
-uv run python -m backend.app.parsing path/to/screenshot.png --parser ocr
 
 # Live projections for the upcoming week (after the previous week's games are final)
 for d in weekly_stats schedules injuries snap_counts rosters_weekly; do

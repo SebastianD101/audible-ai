@@ -60,20 +60,18 @@ add/drop using each model's projections, and the move is scored on real next-wee
 - Scoring uses the same metrics and bootstrap as the backtest, against the season-average
   baseline at the same cutoff. A week generated after its first kickoff is excluded
   automatically.
-- **Status: tracking started at week 8. No week is scored yet.** It will take most of a season
-  before the intervals mean much; until then the live page is a tracker, not a result.
+- **Status: tracking started at week 8. One week is scored so far** (week 8, 156 relevant
+  player-weeks). It will take most of a season before the intervals mean much; until then the
+  live page is a tracker, not a result.
 
-## 4. Screenshot parsing and league import
+## 4. League import
 
-[docs/parsing.md](parsing.md).
-
-- **Extraction accuracy isn't measured.** There is no labeled screenshot set yet. The one real
-  check so far is a single Sleeper screenshot, where local OCR matched 13 of 13 players. That
-  is an anecdote (n = 1), not an accuracy figure.
-- The parser returns per-player confidence flags, and the UI makes the user review every
-  flagged row, so errors are visible rather than silent.
-- **Sleeper leagues skip parsing entirely.** Exact player IDs and the league's real free-agent
-  pool come from Sleeper's public API.
+- **Sleeper leagues import with exact player IDs** through the nflverse ID crosswalk, along with
+  the league's real free-agent pool and lineup settings, from Sleeper's public API.
+- Players missing from the crosswalk are flagged for the user to resolve rather than guessed.
+- Other platforms aren't imported. Their users add players by name. Screenshot parsing was
+  built and then removed, partly because its accuracy was never measured
+  ([decisions](decisions.md)).
 
 ## What this does not show
 
