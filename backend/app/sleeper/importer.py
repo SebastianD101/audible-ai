@@ -14,16 +14,16 @@
 from collections import Counter
 from dataclasses import dataclass
 
-from backend.app.parsing.players import IndexedPlayer, PlayerIndex
-from backend.app.parsing.schemas import (
+from backend.app.projections import ProjectionTable
+from backend.app.roster.players import IndexedPlayer, PlayerIndex
+from backend.app.roster.schemas import (
     Candidate,
     ExtractedPlayer,
     ParsedPlayer,
     ParsedRoster,
     PlayerMatch,
 )
-from backend.app.parsing.teams import canonical_team
-from backend.app.projections import ProjectionTable
+from backend.app.roster.teams import canonical_team
 from backend.app.sleeper.schemas import SleeperLeague, SleeperRoster
 from ml.optimize.league import LeagueSettings, SlotName
 

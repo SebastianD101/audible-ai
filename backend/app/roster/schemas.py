@@ -1,11 +1,9 @@
-"""Pydantic models for a parsed roster screenshot.
+"""Pydantic models for an imported roster, as shown on the review screen.
 
-Two layers:
-
-- ``ExtractedRoster`` is what the vision model reads off the image. It is passed to the API as
-  the structured-output schema, so it stays flat and uses only types the schema supports.
-- ``ParsedRoster`` adds the match to nflverse IDs and a ``needs_review`` flag per player. It is
-  the contract the review screen (Phase 8) and the optimizer (Phase 7) consume.
+``ExtractedPlayer`` is a row as the source (a Sleeper league) describes it; ``ParsedRoster``
+adds the match to nflverse IDs and a ``needs_review`` flag per player. It is the contract the
+review screen and the optimizer consume. The names predate Sleeper import, when rows were read
+from screenshots, and are kept so the API shape is unchanged.
 """
 
 from typing import Literal
@@ -19,7 +17,7 @@ MatchStatus = Literal["matched", "ambiguous", "unmatched"]
 
 
 class ExtractedPlayer(BaseModel):
-    """One roster row as read from the screenshot, before any ID matching."""
+    """One roster row as the source describes it, before any ID matching."""
 
     name: str = Field(description="Player name exactly as shown, or the team name for a defense.")
     position: Position | None = Field(
@@ -41,18 +39,6 @@ class ExtractedPlayer(BaseModel):
         )
     )
     note: str | None = Field(description="Short reason for any uncertainty; null if clear.")
-
-
-class ExtractedRoster(BaseModel):
-    """Everything the vision model read from one screenshot."""
-
-    platform: Platform = Field(description="Fantasy platform the screenshot appears to be from.")
-    players: list[ExtractedPlayer] = Field(
-        description="Every rostered player visible, top to bottom, including bench and IR."
-    )
-    warnings: list[str] = Field(
-        description="Problems with the image as a whole, e.g. 'roster appears cut off at bottom'."
-    )
 
 
 class Candidate(BaseModel):

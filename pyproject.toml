@@ -1,25 +1,21 @@
 [project]
 name = "audible-ai"
 version = "0.1.0"
-description = "Screenshot-to-waiver-wire recommendations for fantasy football"
+description = "Sleeper-league waiver-wire recommendations for fantasy football"
 readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
     "alembic==1.20.0",
-    "anthropic==1.12.1",
     "fastapi[standard]==0.142.4",
     "httpx==0.28.1",
     "nflreadpy==0.1.5",
     "numpy==2.5.3",
-    "onnxruntime==1.30.0",
-    "opencv-python-headless==4.14.0.94",
     "polars==1.44.2",
     "psycopg[binary]==3.3.6",
     "pulp==3.3.2",
     "pyarrow==25.0.1",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
-    "rapidocr==3.10.0",
     "sqlalchemy==2.1.4",
 ]
 
@@ -65,15 +61,14 @@ strict = true
 exclude = ['^frontend/', '^\.venv/']
 
 [[tool.mypy.overrides]]
-module = ["nflreadpy", "nflreadpy.*", "pulp", "pulp.*", "rapidocr", "rapidocr.*"]
+module = ["nflreadpy", "nflreadpy.*", "pulp", "pulp.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra --strict-markers -m 'not network and not ocr'"
+addopts = "-ra --strict-markers -m 'not network'"
 markers = [
     "network: hits the real nflverse API (deselected by default; run with -m network)",
     "postgres: needs a Postgres at TEST_DATABASE_URL (skipped when unset; CI runs it)",
-    "ocr: runs the real OCR engine and its ~31 MB models (deselected by default; -m ocr)",
 ]
