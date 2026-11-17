@@ -93,5 +93,9 @@ jobs:
   deploy:
     needs: refresh
     if: needs.refresh.outputs.changed == 'true'
+    # A called workflow gets no more permissions than its caller; it pushes to GHCR.
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/deploy.yml
     secrets: inherit
