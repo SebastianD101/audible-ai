@@ -302,8 +302,8 @@ _Superseded 2026-11-09: screenshot parsing was removed (see the last entry)._
 - **Images:** type comes from magic bytes (PNG, JPEG, WebP, GIF), never the filename. The size
   is capped at 5 MB (the API's per-image limit; `MAX_UPLOAD_BYTES` can only lower it). Images
   are held in memory and never written to disk.
-- **Extraction accuracy is not yet measured.** It needs a labeled set of real screenshots (see
-  `docs/parsing.md`). Until then, no accuracy claim is made.
+- **Extraction accuracy was never measured.** It needed a labeled set of real screenshots. That
+  work stopped when screenshot parsing was removed on 2026-11-09, so no accuracy claim is made.
 
 ## 2026-10-28: Sleeper league import
 
@@ -354,8 +354,8 @@ _Superseded 2026-11-09: removed with the rest of screenshot parsing._
   OCR parse warns the user to check each row.
 - **`PARSER=auto` by default:** Claude when a key and model are configured, else OCR. Existing
   setups keep their behavior. `--parser` on the CLI overrides it.
-- **Not yet measured on real screenshots.** The labeled-set plan in `docs/parsing.md` now
-  compares both readers.
+- **Never measured on real screenshots.** The planned labeled-set comparison of both readers
+  stopped when screenshot parsing was removed on 2026-11-09.
 
 ## 2026-10-27: Optimizer (Phase 7)
 
@@ -448,8 +448,9 @@ _Superseded 2026-11-09: removed with the rest of screenshot parsing._
   manage them later. API types are hand-written in `frontend/lib/api.ts`, with no codegen
   dependency. The backend snapshots its OpenAPI schema (`tests/backend/api/openapi.json`), so
   any contract change shows up in review.
-- **Not yet measured:** extraction accuracy on real screenshots, and live 2026 accuracy. Both
-  need data that doesn't exist yet: labeled screenshots, and completed weeks.
+- **Not yet measured:** live 2026 accuracy, which needs completed weeks (now tracked in
+  [live-2026.md](live-2026.md)). Screenshot extraction accuracy was also open here; that work
+  stopped when screenshot parsing was removed on 2026-11-09.
 
 ## 2026-10-28: Deployment and weekly refresh (Phase 9)
 
