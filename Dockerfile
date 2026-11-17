@@ -38,3 +38,7 @@ COPY --chown=app:app ml/data/projections ./ml/data/projections
 COPY --chown=app:app ml/data/raw/rosters_weekly ./ml/data/raw/rosters_weekly
 COPY --from=frontend --chown=app:app /frontend/out ./static
 ENV STATIC_DIR=/app/static
+# Render's free tier has no pre-deploy step, so migrations run at startup. With DATABASE_URL
+# unset that's a SQLite file inside the container: the audit log resets on every restart.
+# Render sets PORT; 8000 elsewhere.
+CMD ["sh", "-c", "alembic -c backend/alembic.ini upgrade head && exec fastapi run backend/app/main.py --host 0.0.0.0 --port \"${PORT:-8000}\""]
