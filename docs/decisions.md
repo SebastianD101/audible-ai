@@ -503,3 +503,39 @@ _Superseded 2026-11-09: removed with the rest of screenshot parsing._
   and name scoring moved to `backend/app/roster/`. Sleeper import and search use them. The
   schema names and the `parse_records` table predate the change and are kept, so the API shape
   and the database need no migration.
+
+## 2026-11-16: Render free tier instead of Fly, Neon, and Vercel
+
+- **What changed:** one Render free web service now hosts both the API and the UI. The UI is
+  a Next.js static export (`output: "export"`) served by FastAPI at `/` (`STATIC_DIR`). GitHub
+  Actions builds the `serve` image, smoke-tests it, pushes it to GHCR, and calls Render's
+  deploy hook with that exact tag. `fly.toml` and the Neon and Vercel steps are gone. This
+  supersedes the hosting bullets of the 2026-10-28 entry.
+- **Why:**
+  - **$0, one URL.** Nothing had deployed yet (the Fly token was never set), so this was the
+    moment to pick. Fly would have cost about $0.30 a month at demo traffic and needed a card.
+    Neon and Vercel were free but meant two more accounts, a cross-origin API, and CORS
+    secrets.
+  - **Neither was load-bearing.** The UI is one client-side page with no server features, so
+    a static export loses nothing. The database is a write-only audit log: no request reads it
+    back.
+- **Build in Actions, not on Render.** The image bakes in 2026 rosters, which are gitignored
+  and have to be ingested first, so Render can't build it from the repo. Deploying a prebuilt
+  image also means Render runs the exact image that was smoke-tested, and every past image
+  stays in GHCR for rollback.
+- **Production database: SQLite inside the container.** The serve image sets
+  `DATABASE_URL=sqlite:////tmp/audible.db`, since the app user can't write `/app` (the first
+  smoke run caught this). Render's free tier has no pre-deploy step, so the image runs
+  migrations at startup. The audit log resets whenever the service sleeps or redeploys, which
+  is acceptable because nothing reads it. Postgres support, Alembic, and the CI Postgres test
+  are unchanged; setting `DATABASE_URL` turns real persistence back on.
+- **Costs of the free tier:**
+  - **512 MB of memory.** Every deploy runs `scripts/smoke_serve.py` against the image under
+    `--memory 512m`, including a full-size recommendation (16-player roster, 200 free agents,
+    2 moves), and records peak memory. An out-of-memory optimizer fails the job before it
+    ships. Measured in CI: the whole container, CBC included, peaked at 126 MiB of 512, so
+    there's about 4x headroom.
+  - **Cold starts.** The service sleeps after 15 idle minutes, and waking takes about a
+    minute. The UI is served by the same service, so the first page load waits too. That's
+    fine for a portfolio demo; a paid instance removes it.
+  - **About 5 GB a month of bandwidth.** That's ample at demo traffic.
