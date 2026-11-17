@@ -1,8 +1,11 @@
 """FastAPI application entry point."""
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from backend.app.api import projections, recommendations, sleeper
@@ -38,3 +41,19 @@ class HealthResponse(BaseModel):
 def health() -> HealthResponse:
     """Report that the service is up."""
     return HealthResponse(status="ok")
+
+
+def mount_frontend(target: FastAPI, directory: Path | None) -> None:
+    """Serve the static frontend at ``/``, if one is configured.
+
+    Call it after every API route is registered: Starlette matches routes in order, so
+    ``/api/*`` and ``/health`` win and everything else falls through to the UI files.
+    """
+    if directory is None:
+        return
+    if not (directory / "index.html").is_file():
+        raise FileNotFoundError(f"STATIC_DIR {directory} has no index.html; build the frontend")
+    target.mount("/", StaticFiles(directory=directory, html=True), name="frontend")
+
+
+mount_frontend(app, get_settings().static_dir)

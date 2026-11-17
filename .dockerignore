@@ -11,6 +11,10 @@ ml/data
 !ml/data/projections
 !ml/data/raw/rosters_weekly
 mlruns
-frontend
+# The frontend source is built in the `frontend` stage; its local build output never is.
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/tsconfig.tsbuildinfo
 tests
 docs
