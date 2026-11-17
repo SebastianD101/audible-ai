@@ -74,7 +74,7 @@ jobs:
             echo "### Serve image under $MEMORY_LIMIT"
             if [ -n "$peak" ]; then echo "Peak memory: $((peak / 1024 / 1024)) MiB"; fi
             echo "OOM-killed: $oom"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
           if [ "$status" -ne 0 ] || [ "$oom" = "true" ]; then docker logs api | tail -50; fi
           docker rm --force api
           exit "$status"
