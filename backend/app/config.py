@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     rosters_dir: Path = Path("ml/data/raw/rosters_weekly")
     cors_origins: list[str] = ["http://localhost:3000"]
     sleeper_api_url: str = "https://api.sleeper.app/v1"
+    # The built frontend (`next build` static export). The serve image sets it so one service
+    # hosts both the UI and the API; unset in dev, where `npm run dev` serves the UI.
+    static_dir: Path | None = None
 
 
 @lru_cache

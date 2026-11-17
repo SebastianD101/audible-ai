@@ -16,7 +16,7 @@ reproducibility, honest evaluation, and clear documentation matter as much as mo
 - **League import:** Sleeper public API (no login), matched to nflverse IDs via the crosswalk. Screenshot parsing was removed on 2026-11-09 (see `docs/decisions.md`).
 - **Optimizer:** PuLP or OR-Tools (linear programming)
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind, shadcn/ui, TanStack Query
-- **Ops:** Docker, docker-compose, GitHub Actions (CI and weekly data refresh), Fly.io or Railway for deploy
+- **Ops:** Docker, docker-compose, GitHub Actions (CI and weekly data refresh), Render free tier for deploy (image from GHCR)
 - **Quality:** ruff, mypy, pytest, pre-commit; eslint, prettier, vitest on the frontend
 
 ## Repo layout
@@ -98,7 +98,7 @@ Finish and commit each phase before starting the next. Do not start a later phas
 - Serving params (tunes on <=2025 only; commit the JSON): `uv run python -m ml.serve.params --season 2026`
 - Weekly projections (refuses until week W-1 is final): `uv run python -m ml.serve.project --season 2026 --week W` (`--week auto` picks the next unplayed week and never overwrites or projects after kickoff; projections under `ml/data/projections/` are committed)
 - Live 2026 evaluation (read-only, writes `docs/live-2026.md`): `uv run python -m ml.serve.evaluate --season 2026`
-- Deployable image (data baked in; needs rosters_weekly 2026 ingested): `docker build --target serve .`; compose and CI use `--target runtime`. Deploy and weekly refresh: `.github/workflows/deploy.yml`, `refresh.yml` (setup in `docs/deploy.md`)
+- Deployable image (data and static UI baked in; needs rosters_weekly 2026 ingested): `docker build --target serve .`; compose and CI use `--target runtime`. Smoke-test a running one: `uv run python scripts/smoke_serve.py --base-url http://localhost:8000`. Deploy and weekly refresh: `.github/workflows/deploy.yml`, `refresh.yml` (setup in `docs/deploy.md`)
 - DB migrations: `uv run alembic -c backend/alembic.ini upgrade head` (`DATABASE_URL` unset -> local SQLite `audible.db`)
 - Full stack in Docker (Postgres + migrate + API): `docker compose up --build`
 - Postgres migration test locally: set `TEST_DATABASE_URL` and run `uv run pytest -m postgres`
