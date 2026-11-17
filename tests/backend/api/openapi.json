@@ -45,30 +45,6 @@
         "title": "BacktestEvidence",
         "type": "object"
       },
-      "Body_parse_screenshot_api_parse_post": {
-        "properties": {
-          "file": {
-            "contentMediaType": "application/octet-stream",
-            "description": "PNG, JPEG, WebP, or GIF screenshot",
-            "title": "File",
-            "type": "string"
-          },
-          "kind": {
-            "default": "roster",
-            "enum": [
-              "roster",
-              "free_agents"
-            ],
-            "title": "Kind",
-            "type": "string"
-          }
-        },
-        "required": [
-          "file"
-        ],
-        "title": "Body_parse_screenshot_api_parse_post",
-        "type": "object"
-      },
       "Candidate": {
         "description": "A possible nflverse player for an extracted name.",
         "properties": {
@@ -121,7 +97,7 @@
         "type": "object"
       },
       "ExtractedPlayer": {
-        "description": "One roster row as read from the screenshot, before any ID matching.",
+        "description": "One roster row as the source describes it, before any ID matching.",
         "properties": {
           "injury_tag": {
             "anyOf": [
@@ -332,7 +308,7 @@
         "type": "object"
       },
       "ParseResponse": {
-        "description": "A parsed screenshot plus display info for every matched or candidate player.",
+        "description": "An imported player list plus display info for every matched or candidate player.",
         "properties": {
           "id": {
             "format": "uuid",
@@ -940,48 +916,6 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/api/parse": {
-      "post": {
-        "description": "Parse one screenshot. Rows flagged ``needs_review`` must be confirmed by the user.",
-        "operationId": "parse_screenshot_api_parse_post",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_parse_screenshot_api_parse_post"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ParseResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Parse Screenshot",
-        "tags": [
-          "parse"
-        ]
-      }
-    },
     "/api/players/search": {
       "get": {
         "description": "Players whose names match ``q``, with this week's projection when they have one.",

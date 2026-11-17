@@ -1,21 +1,25 @@
 """Import a roster, free agents, and lineup settings from a Sleeper league.
 
-This is the exact alternative to screenshot parsing for Sleeper leagues: player IDs come from
-the nflverse crosswalk instead of OCR, and the free-agent pool is the whole league's unrostered
-players instead of what fit on screen. The result reuses the parse response shape, so the review
-table works unchanged.
+Player IDs come from the nflverse crosswalk, so every rostered player matches exactly, and the
+free-agent pool is the whole league's unrostered players. Each imported list is stored (as a
+``ParseRecord``; the table name predates Sleeper import) and returned as review rows.
 """
 
 import logging
-from typing import Annotated
+import uuid
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import PlayerIndexDep, ProjectionsDep, SleeperDep
-from backend.app.api.parse import RETRY_AFTER_SECONDS, ParseResponse, store_parse
+from backend.app.db.models import ParseRecord
 from backend.app.db.session import get_session
+from backend.app.projections import ProjectionTable
+from backend.app.roster.players import PlayerIndex
+from backend.app.roster.schemas import ParsedRoster
+from backend.app.search import PlayerHit, hits_for
 from backend.app.sleeper.client import SleeperNotFoundError, SleeperUnavailableError
 from backend.app.sleeper.importer import NotInLeagueError, import_league, scoring_summary
 from ml.optimize.league import LeagueSettings
@@ -25,6 +29,43 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/sleeper", tags=["sleeper"])
 
 SLEEPER_ID = r"^\d{1,32}$"
+RETRY_AFTER_SECONDS = 30
+
+RosterKind = Literal["roster", "free_agents"]
+
+
+class ParseResponse(BaseModel):
+    """An imported player list plus display info for every matched or candidate player."""
+
+    id: uuid.UUID
+    kind: RosterKind
+    roster: ParsedRoster
+    players: dict[str, PlayerHit]
+
+
+def store_parse(
+    session: Session,
+    kind: RosterKind,
+    roster: ParsedRoster,
+    index: PlayerIndex,
+    table: ProjectionTable,
+) -> ParseResponse:
+    """Persist an imported roster and return it with display info for every player it mentions."""
+    record = ParseRecord(
+        kind=kind,
+        platform=roster.platform,
+        model=roster.model,
+        players=[p.model_dump(mode="json") for p in roster.players],
+        warnings=roster.warnings,
+    )
+    session.add(record)
+    session.flush()
+    ids = {c.player_id for p in roster.players for c in p.match.candidates}
+    ids |= {p.match.player_id for p in roster.players if p.match.player_id}
+    logger.info("imported %s: %d players (record %s)", kind, len(roster.players), record.id)
+    return ParseResponse(
+        id=record.id, kind=kind, roster=roster, players=hits_for(index, table, ids)
+    )
 
 
 class SleeperLeagueOut(BaseModel):

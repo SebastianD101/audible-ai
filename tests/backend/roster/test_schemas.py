@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.app.parsing.schemas import ExtractedPlayer, ExtractedRoster
+from backend.app.roster.schemas import ExtractedPlayer
 
 
 def player(**overrides: object) -> dict[str, object]:
@@ -17,11 +17,9 @@ def player(**overrides: object) -> dict[str, object]:
     return base | overrides
 
 
-def test_roster_round_trips_through_json() -> None:
-    roster = ExtractedRoster.model_validate(
-        {"platform": "sleeper", "players": [player()], "warnings": []}
-    )
-    assert ExtractedRoster.model_validate_json(roster.model_dump_json()) == roster
+def test_player_round_trips_through_json() -> None:
+    row = ExtractedPlayer.model_validate(player())
+    assert ExtractedPlayer.model_validate_json(row.model_dump_json()) == row
 
 
 @pytest.mark.parametrize("bad", [{"position": "LB"}, {"legibility": "unsure"}, {"name": None}])

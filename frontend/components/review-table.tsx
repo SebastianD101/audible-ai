@@ -108,7 +108,7 @@ export function ReviewTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Screenshot</TableHead>
+              <TableHead>Imported as</TableHead>
               <TableHead>Player</TableHead>
               <TableHead className="text-right">Proj</TableHead>
               <TableHead>Status</TableHead>

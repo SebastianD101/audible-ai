@@ -6,9 +6,9 @@ export default function Home() {
       <header className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight">Audible AI</h1>
         <p className="text-muted-foreground">
-          Upload a screenshot of your fantasy roster and your league&apos;s
-          waiver wire. Check the players we read, then get the add/drop that
-          most raises next week&apos;s projected lineup.
+          Import your Sleeper league, or add your roster and free agents by
+          name, then get the add/drop that most raises next week&apos;s
+          projected lineup.
         </p>
       </header>
       <WaiverFlow />

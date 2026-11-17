@@ -2,12 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ApiError,
-  checkImage,
   createRecommendation,
   DEFAULT_SETTINGS,
   detailMessage,
   getProjectionsMeta,
-  parseScreenshot,
 } from "./api";
 
 function jsonResponse(
@@ -40,24 +38,6 @@ describe("detailMessage", () => {
   });
 });
 
-describe("checkImage", () => {
-  it("accepts a small PNG", () => {
-    expect(
-      checkImage(new File(["x"], "a.png", { type: "image/png" })),
-    ).toBeNull();
-  });
-
-  it("rejects other types and oversized files", () => {
-    expect(
-      checkImage(new File(["x"], "a.pdf", { type: "application/pdf" })),
-    ).toMatch(/PNG/);
-    const big = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.png", {
-      type: "image/png",
-    });
-    expect(checkImage(big)).toMatch(/5 MB/);
-  });
-});
-
 describe("request", () => {
   it("returns parsed JSON on success", async () => {
     vi.stubGlobal(
@@ -80,10 +60,7 @@ describe("request", () => {
           ),
         ),
     );
-    const error = await parseScreenshot(
-      new File(["x"], "a.png", { type: "image/png" }),
-      "roster",
-    ).catch((e: unknown) => e);
+    const error = await getProjectionsMeta().catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
       status: 503,

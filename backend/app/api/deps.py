@@ -1,16 +1,14 @@
-"""Shared FastAPI dependencies: settings, projections, the player index, the API client."""
+"""Shared FastAPI dependencies: settings, projections, the player index, the Sleeper client."""
 
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-import anthropic
 from fastapi import Depends
 
 from backend.app.config import Settings, get_settings
-from backend.app.parsing.players import PlayerIndex, load_player_index
-from backend.app.parsing.service import make_client
 from backend.app.projections import ProjectionTable, load_projections
+from backend.app.roster.players import PlayerIndex, load_player_index
 from backend.app.sleeper.client import SleeperClient
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -36,15 +34,6 @@ def get_player_index(settings: SettingsDep, table: ProjectionsDep) -> PlayerInde
 
 
 PlayerIndexDep = Annotated[PlayerIndex, Depends(get_player_index)]
-
-
-@lru_cache(maxsize=1)
-def get_client() -> anthropic.Anthropic | None:
-    """One API client per process (it pools connections); None when parsing with OCR."""
-    return make_client(get_settings())
-
-
-ClientDep = Annotated[anthropic.Anthropic | None, Depends(get_client)]
 
 
 @lru_cache(maxsize=1)

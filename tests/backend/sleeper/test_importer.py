@@ -1,8 +1,8 @@
 import polars as pl
 import pytest
 
-from backend.app.parsing.players import PlayerIndex, build_player_index, load_player_index
 from backend.app.projections import ProjectionTable, load_projections
+from backend.app.roster.players import PlayerIndex, build_player_index, load_player_index
 from backend.app.sleeper.importer import (
     NotInLeagueError,
     free_agent_rows,

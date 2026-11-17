@@ -27,10 +27,6 @@ Prices are the providers' and change; check their pricing pages.
 6. **First deploy.** Actions → Deploy → Run workflow. Then check it with
    `curl https://<app>.fly.dev/health`, which should return `{"status":"ok"}`.
 
-Optional: to use Claude for screenshots instead of OCR, set `PARSER = "auto"` in `fly.toml`.
-Then run `fly secrets set ANTHROPIC_API_KEY=... ANTHROPIC_MODEL=...`. Every parse is then a
-billed API call, so leave it off for a public demo.
-
 ## What runs when
 
 - **Push to `main`:** CI runs, and then `deploy.yml` builds the `serve` image and deploys it.

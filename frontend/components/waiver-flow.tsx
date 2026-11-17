@@ -32,7 +32,6 @@ import { LeagueSettingsForm } from "./league-settings-form";
 import { RecommendationView } from "./recommendation-view";
 import { ReviewTable } from "./review-table";
 import { SleeperImportCard } from "./sleeper-import-card";
-import { UploadCard } from "./upload-card";
 
 function ProjectionsBanner() {
   const meta = useQuery({
@@ -125,17 +124,11 @@ export function WaiverFlow() {
           1. Your roster
         </h2>
         <SleeperImportCard onImported={applyImport} />
-        <UploadCard
-          kind="roster"
-          title="Roster screenshot"
-          description="Not on Sleeper? Upload a screenshot of your team page from ESPN, Yahoo, or any other platform."
-          onParsed={(r) => edit(setRoster)(rowsFromParse(r))}
-        />
         <ReviewTable
           rows={roster}
           onChange={edit(setRoster)}
           allowLock
-          emptyText="Upload a screenshot or add players by name."
+          emptyText="Import your Sleeper league, or add players by name."
           addLabel="Add a roster player by name"
         />
       </section>
@@ -144,18 +137,10 @@ export function WaiverFlow() {
         <h2 id="fa-heading" className="text-lg font-semibold">
           2. Available free agents
         </h2>
-        <UploadCard
-          kind="free_agents"
-          title="Waiver-wire screenshot"
-          description="A screenshot of your league's available players. Only players you list are considered. A Sleeper import fills this in for you."
-          onParsed={(r) =>
-            edit(setFreeAgents)([...freeAgents, ...rowsFromParse(r)])
-          }
-        />
         <ReviewTable
           rows={freeAgents}
           onChange={edit(setFreeAgents)}
-          emptyText="Upload a waiver screenshot or add free agents by name."
+          emptyText="A Sleeper import fills this in. Otherwise, add the free agents in your league by name; only players you list are considered."
           addLabel="Add a free agent by name"
         />
       </section>

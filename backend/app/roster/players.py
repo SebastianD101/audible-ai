@@ -13,8 +13,8 @@ from typing import get_args
 
 import polars as pl
 
-from backend.app.parsing.schemas import Position
-from backend.app.parsing.teams import TEAMS
+from backend.app.roster.schemas import Position
+from backend.app.roster.teams import TEAMS
 
 DEFAULT_ROSTERS_DIR = Path("ml/data/raw/rosters_weekly")
 
